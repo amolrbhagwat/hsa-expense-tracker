@@ -79,6 +79,12 @@ export const baseStyles = `
   .card-header h2 { font-size: 12.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft); }
   .card-body { padding: 6px 0; }
 
+  .badge {
+    display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 5px;
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--ink-soft);
+  }
+
   /* ---------- manage grid ---------- */
   .manage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; align-items: start; }
 

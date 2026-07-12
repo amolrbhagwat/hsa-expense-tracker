@@ -181,3 +181,64 @@ test("POST /manage/providers with a blank name redirects with an error, and GET 
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });
 });
+
+test("GET /manage lists accounts, and POST creates/deletes them", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const empty = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(empty.body, /No accounts yet\./);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Fidelity HSA", type: "hsa" },
+  });
+  assert.equal(create.statusCode, 302);
+  assert.equal(create.headers.location, "/manage");
+
+  const afterCreate = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterCreate.body, /Fidelity HSA <span class="badge">HSA<\/span>/);
+
+  const idMatch = afterCreate.body.match(/\/manage\/accounts\/(\d+)\/delete/);
+  assert.ok(idMatch, "expected an account id in the rendered form action");
+  const id = idMatch[1];
+
+  await app.inject({
+    method: "POST",
+    url: `/manage/accounts/${id}/delete`,
+  });
+  const afterDelete = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterDelete.body, /No accounts yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /manage/accounts with a duplicate name redirects with an error, and GET /manage shows it", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Fidelity HSA", type: "hsa" },
+  });
+
+  const duplicate = await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Fidelity HSA", type: "hsa" },
+  });
+  assert.equal(duplicate.statusCode, 302);
+  assert.equal(duplicate.headers.location, "/manage?error=duplicate-account-name");
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/manage?error=duplicate-account-name",
+  });
+  assert.match(withError.body, /An account with that name already exists\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});

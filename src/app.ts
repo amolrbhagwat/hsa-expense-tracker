@@ -1,5 +1,11 @@
 import formbody from "@fastify/formbody";
 import Fastify, { type FastifyInstance } from "fastify";
+import {
+  createAccount,
+  deleteAccount,
+  listAccounts,
+  type AccountType,
+} from "./accounts.js";
 import { openDatabase } from "./db.js";
 import { createPatient, deletePatient, listPatients } from "./patients.js";
 import {
@@ -51,6 +57,7 @@ export function buildApp(
           renderManage(
             listPatients(db),
             listProviders(db),
+            listAccounts(db),
             request.query.error,
           ),
         );
@@ -114,6 +121,26 @@ export function buildApp(
     "/manage/providers/:id/delete",
     async (request, reply) => {
       deleteProvider(db, Number(request.params.id));
+      reply.redirect("/manage");
+    },
+  );
+
+  app.post<{ Body: { name: string; type: AccountType } }>(
+    "/manage/accounts",
+    async (request, reply) => {
+      const result = createAccount(db, request.body.name, request.body.type);
+      if (result === "created") {
+        reply.redirect("/manage");
+      } else {
+        reply.redirect(`/manage?error=${result}-account-name`);
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/manage/accounts/:id/delete",
+    async (request, reply) => {
+      deleteAccount(db, Number(request.params.id));
       reply.redirect("/manage");
     },
   );

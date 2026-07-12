@@ -43,6 +43,13 @@ with the remaining balance on visit #1). A Payment can also have zero
 visits (e.g. a pharmacy purchase).
 _Avoid_: Appointment, encounter
 
+**Visit document**:
+A file documenting a Visit itself (e.g. an EOB, an after-visit summary) —
+separate from Receipt, which documents Payments. One-to-many with Visit. A
+document that also needs to justify a Payment is attached again separately
+as a Receipt, rather than shared between the two.
+_Avoid_: Receipt, EOB
+
 **Reimbursement**:
 A withdrawal from a tax-advantaged Account (hsa/fsa/lpfsa) that pays back
 one or more out-of-pocket Payments. Many-to-many with Payment, and each

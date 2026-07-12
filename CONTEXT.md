@@ -49,7 +49,8 @@ one or more out-of-pocket Payments. Many-to-many with Payment, and each
 link carries its own amount — a payment isn't always reimbursed in full by
 a single reimbursement. E.g. a $900 dental payment with only $800 available
 in an LPFSA gets $800 reimbursed from the LPFSA and the remaining $100
-reimbursed separately from an HSA.
+reimbursed separately from an HSA. Has a status — `initiated` (submitted to
+the account, awaiting transfer) or `completed` (money received).
 _Avoid_: Withdrawal, payout
 
 **Reimbursable amount**:

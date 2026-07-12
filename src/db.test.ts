@@ -37,18 +37,38 @@ test("openDatabase creates every table from the migrations", () => {
   rmSync(dataDir, { recursive: true, force: true });
 });
 
+test("openDatabase adds notes columns to visits, payments, and reimbursements", () => {
+  const dataDir = tempDataDir();
+  const db = openDatabase(dataDir);
+
+  for (const table of ["visits", "payments", "reimbursements"]) {
+    const columns = db
+      .prepare(`PRAGMA table_info(${table})`)
+      .all()
+      .map((row) => (row as { name: string }).name);
+    assert.ok(columns.includes("notes"), `${table} is missing a notes column`);
+  }
+
+  db.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
 test("openDatabase does not reapply migrations on reopen", () => {
   const dataDir = tempDataDir();
 
-  openDatabase(dataDir).close();
-  const db = openDatabase(dataDir);
+  const first = openDatabase(dataDir);
+  const { count: firstCount } = first
+    .prepare("SELECT COUNT(*) as count FROM schema_migrations")
+    .get() as { count: number };
+  first.close();
 
-  const { count } = db
+  const second = openDatabase(dataDir);
+  const { count: secondCount } = second
     .prepare("SELECT COUNT(*) as count FROM schema_migrations")
     .get() as { count: number };
 
-  assert.equal(count, 1);
+  assert.equal(secondCount, firstCount);
 
-  db.close();
+  second.close();
   rmSync(dataDir, { recursive: true, force: true });
 });

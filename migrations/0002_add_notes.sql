@@ -1,0 +1,3 @@
+ALTER TABLE visits ADD COLUMN notes TEXT;
+ALTER TABLE payments ADD COLUMN notes TEXT;
+ALTER TABLE reimbursements ADD COLUMN notes TEXT;

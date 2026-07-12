@@ -117,7 +117,7 @@ test("POST /manage/patients with a duplicate name redirects with an error, and G
   rmSync(dataDir, { recursive: true, force: true });
 });
 
-test("GET /manage lists providers, and POST creates/updates/deletes them", async () => {
+test("GET /manage lists providers, and POST creates/deletes them", async () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
   const app = buildApp(dataDir, { logger: false });
 
@@ -133,21 +133,14 @@ test("GET /manage lists providers, and POST creates/updates/deletes them", async
   assert.equal(create.headers.location, "/manage");
 
   const afterCreate = await app.inject({ method: "GET", url: "/manage" });
-  assert.match(afterCreate.body, /value="CVS Pharmacy"/);
-  assert.match(afterCreate.body, /<option value="pharmacy" selected>/);
+  assert.match(
+    afterCreate.body,
+    /CVS Pharmacy <span class="badge">Pharmacy<\/span>/,
+  );
 
-  const idMatch = afterCreate.body.match(/\/manage\/providers\/(\d+)\/update/);
+  const idMatch = afterCreate.body.match(/\/manage\/providers\/(\d+)\/delete/);
   assert.ok(idMatch, "expected a provider id in the rendered form action");
   const id = idMatch[1];
-
-  await app.inject({
-    method: "POST",
-    url: `/manage/providers/${id}/update`,
-    payload: { name: "CVS", category: "other" },
-  });
-  const afterUpdate = await app.inject({ method: "GET", url: "/manage" });
-  assert.match(afterUpdate.body, /value="CVS"/);
-  assert.match(afterUpdate.body, /<option value="other" selected>/);
 
   await app.inject({
     method: "POST",
@@ -177,6 +170,37 @@ test("POST /manage/providers with a blank name redirects with an error, and GET 
     url: "/manage?error=blank-provider-name",
   });
   assert.match(withError.body, /Provider name can't be blank\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /manage/providers with a duplicate name redirects with an error, and GET /manage shows it", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  await app.inject({
+    method: "POST",
+    url: "/manage/providers",
+    payload: { name: "CVS Pharmacy", category: "pharmacy" },
+  });
+
+  const duplicate = await app.inject({
+    method: "POST",
+    url: "/manage/providers",
+    payload: { name: "CVS Pharmacy", category: "pharmacy" },
+  });
+  assert.equal(duplicate.statusCode, 302);
+  assert.equal(
+    duplicate.headers.location,
+    "/manage?error=duplicate-provider-name",
+  );
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/manage?error=duplicate-provider-name",
+  });
+  assert.match(withError.body, /A provider with that name already exists\./);
 
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });

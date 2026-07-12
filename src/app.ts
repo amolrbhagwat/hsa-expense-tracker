@@ -12,7 +12,6 @@ import {
   createProvider,
   deleteProvider,
   listProviders,
-  updateProvider,
   type ProviderCategory,
 } from "./providers.js";
 import { renderHome } from "./views/home.js";
@@ -92,30 +91,13 @@ export function buildApp(
         request.body.name,
         request.body.category,
       );
-      if (result === "saved") {
+      if (result === "created") {
         reply.redirect("/manage");
       } else {
         reply.redirect(`/manage?error=${result}-provider-name`);
       }
     },
   );
-
-  app.post<{
-    Params: { id: string };
-    Body: { name: string; category: ProviderCategory };
-  }>("/manage/providers/:id/update", async (request, reply) => {
-    const result = updateProvider(
-      db,
-      Number(request.params.id),
-      request.body.name,
-      request.body.category,
-    );
-    if (result === "saved") {
-      reply.redirect("/manage");
-    } else {
-      reply.redirect(`/manage?error=${result}-provider-name`);
-    }
-  });
 
   app.post<{ Params: { id: string } }>(
     "/manage/providers/:id/delete",

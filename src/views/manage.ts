@@ -7,6 +7,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "blank-patient-name": "Patient name can't be blank.",
   "duplicate-patient-name": "A patient with that name already exists.",
   "blank-provider-name": "Provider name can't be blank.",
+  "duplicate-provider-name": "A provider with that name already exists.",
   "blank-account-name": "Account name can't be blank.",
   "duplicate-account-name": "An account with that name already exists.",
 };
@@ -29,11 +30,14 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function categoryLabel(category: ProviderCategory): string {
+  return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
 function categoryOptions(selected?: ProviderCategory): string {
   return PROVIDER_CATEGORIES.map((category) => {
     const isSelected = category === selected ? " selected" : "";
-    const label = category.charAt(0).toUpperCase() + category.slice(1);
-    return `<option value="${category}"${isSelected}>${label}</option>`;
+    return `<option value="${category}"${isSelected}>${categoryLabel(category)}</option>`;
   }).join("");
 }
 
@@ -61,11 +65,7 @@ function renderPatientRow(patient: Patient): string {
 function renderProviderRow(provider: Provider): string {
   return `
     <div class="manage-row">
-      <form method="post" action="/manage/providers/${provider.id}/update" class="manage-row-edit-form">
-        <input type="text" name="name" value="${escapeHtml(provider.name)}">
-        <select name="category">${categoryOptions(provider.category)}</select>
-        <button type="submit" class="btn-icon" title="Save">✓</button>
-      </form>
+      <span>${escapeHtml(provider.name)} <span class="badge">${categoryLabel(provider.category)}</span></span>
       <form method="post" action="/manage/providers/${provider.id}/delete">
         <button type="submit" class="btn-icon" title="Delete">✕</button>
       </form>

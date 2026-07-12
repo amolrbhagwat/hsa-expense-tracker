@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { openDatabase } from "./db.js";
+import { renderHome } from "./views/home.js";
 
 export function buildApp(
   dataDir: string,
@@ -11,6 +12,10 @@ export function buildApp(
 
   app.get("/health", async () => {
     return { status: "ok" };
+  });
+
+  app.get("/", async (_request, reply) => {
+    reply.type("text/html").send(renderHome());
   });
 
   return app;

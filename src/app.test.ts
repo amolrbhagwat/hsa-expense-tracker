@@ -17,3 +17,17 @@ test("GET /health returns ok", async () => {
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });
 });
+
+test("GET / renders the home page as HTML", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const response = await app.inject({ method: "GET", url: "/" });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers["content-type"] as string, /text\/html/);
+  assert.match(response.body, /Hello, HSA Tracker/);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});

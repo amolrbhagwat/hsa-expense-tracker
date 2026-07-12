@@ -30,8 +30,15 @@ export function layout(title: string, activeTab: Tab, content: string): string {
 <style>${baseStyles}</style>
 </head>
 <body>
+<div class="app-shell">
+<header class="topbar">
+<div class="wordmark">
+<span class="mark">HSA/FSA Tracker</span>
+</div>
 <nav class="tabs">${tabsHtml}</nav>
+</header>
 <main>${content}</main>
+</div>
 </body>
 </html>`;
 }

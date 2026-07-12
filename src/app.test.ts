@@ -37,7 +37,6 @@ for (const [url, heading] of [
   ["/payments", "Payments"],
   ["/visits", "Visits"],
   ["/reimbursements", "Reimbursements"],
-  ["/manage", "Manage"],
 ] as const) {
   test(`GET ${url} renders the ${heading} placeholder with its tab active`, async () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
@@ -56,3 +55,64 @@ for (const [url, heading] of [
     rmSync(dataDir, { recursive: true, force: true });
   });
 }
+
+test("GET /manage lists patients, and POST creates/deletes them", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const empty = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(empty.body, /No patients yet\./);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/manage/patients",
+    payload: { name: "Kavi" },
+  });
+  assert.equal(create.statusCode, 302);
+  assert.equal(create.headers.location, "/manage");
+
+  const afterCreate = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterCreate.body, /<span>Kavi<\/span>/);
+
+  const idMatch = afterCreate.body.match(/\/manage\/patients\/(\d+)\/delete/);
+  assert.ok(idMatch, "expected a patient id in the rendered form action");
+  const id = idMatch[1];
+
+  await app.inject({
+    method: "POST",
+    url: `/manage/patients/${id}/delete`,
+  });
+  const afterDelete = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterDelete.body, /No patients yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /manage/patients with a duplicate name redirects with an error, and GET /manage shows it", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  await app.inject({
+    method: "POST",
+    url: "/manage/patients",
+    payload: { name: "Kavi" },
+  });
+
+  const duplicate = await app.inject({
+    method: "POST",
+    url: "/manage/patients",
+    payload: { name: "Kavi" },
+  });
+  assert.equal(duplicate.statusCode, 302);
+  assert.equal(duplicate.headers.location, "/manage?error=duplicate-patient-name");
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/manage?error=duplicate-patient-name",
+  });
+  assert.match(withError.body, /A patient with that name already exists\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});

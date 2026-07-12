@@ -1,10 +1,20 @@
 import type { Patient } from "../patients.js";
+import type { Provider, ProviderCategory } from "../providers.js";
 import { layout } from "./layout.js";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "blank-patient-name": "Patient name can't be blank.",
   "duplicate-patient-name": "A patient with that name already exists.",
+  "blank-provider-name": "Provider name can't be blank.",
 };
+
+const PROVIDER_CATEGORIES: ProviderCategory[] = [
+  "medical",
+  "dental",
+  "vision",
+  "pharmacy",
+  "other",
+];
 
 function escapeHtml(value: string): string {
   return value
@@ -12,6 +22,14 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function categoryOptions(selected?: ProviderCategory): string {
+  return PROVIDER_CATEGORIES.map((category) => {
+    const isSelected = category === selected ? " selected" : "";
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    return `<option value="${category}"${isSelected}>${label}</option>`;
+  }).join("");
 }
 
 function renderPatientRow(patient: Patient): string {
@@ -24,10 +42,32 @@ function renderPatientRow(patient: Patient): string {
     </div>`;
 }
 
-export function renderManage(patients: Patient[], errorCode?: string): string {
+function renderProviderRow(provider: Provider): string {
+  return `
+    <div class="manage-row">
+      <form method="post" action="/manage/providers/${provider.id}/update" class="manage-row-edit-form">
+        <input type="text" name="name" value="${escapeHtml(provider.name)}">
+        <select name="category">${categoryOptions(provider.category)}</select>
+        <button type="submit" class="btn-icon" title="Save">✓</button>
+      </form>
+      <form method="post" action="/manage/providers/${provider.id}/delete">
+        <button type="submit" class="btn-icon" title="Delete">✕</button>
+      </form>
+    </div>`;
+}
+
+export function renderManage(
+  patients: Patient[],
+  providers: Provider[],
+  errorCode?: string,
+): string {
   const patientRows =
     patients.map(renderPatientRow).join("") ||
     `<div class="manage-row"><span>No patients yet.</span></div>`;
+
+  const providerRows =
+    providers.map(renderProviderRow).join("") ||
+    `<div class="manage-row"><span>No providers yet.</span></div>`;
 
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
   const errorBanner = errorMessage
@@ -39,18 +79,31 @@ export function renderManage(patients: Patient[], errorCode?: string): string {
     <div class="topline">
       <div>
         <h1>Manage</h1>
-        <span class="subtitle">Patients</span>
+        <span class="subtitle">Patients and providers</span>
       </div>
     </div>
-    <div class="card manage-card">
-      <div class="card-header"><h2>Patients</h2></div>
-      <div class="card-body">
-        ${patientRows}
+    <div class="manage-grid">
+      <div class="card manage-card">
+        <div class="card-header"><h2>Patients</h2></div>
+        <div class="card-body">
+          ${patientRows}
+        </div>
+        <form method="post" action="/manage/patients" class="inline-add">
+          <input type="text" name="name" placeholder="New patient name…">
+          <button type="submit" class="btn btn-sm">Add</button>
+        </form>
       </div>
-      <form method="post" action="/manage/patients" class="inline-add">
-        <input type="text" name="name" placeholder="New patient name…">
-        <button type="submit" class="btn btn-sm">Add</button>
-      </form>
+      <div class="card manage-card">
+        <div class="card-header"><h2>Providers</h2></div>
+        <div class="card-body">
+          ${providerRows}
+        </div>
+        <form method="post" action="/manage/providers" class="inline-add">
+          <input type="text" name="name" placeholder="New provider…">
+          <select name="category">${categoryOptions()}</select>
+          <button type="submit" class="btn btn-sm">Add</button>
+        </form>
+      </div>
     </div>
   `;
 

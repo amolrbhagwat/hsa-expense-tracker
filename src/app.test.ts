@@ -116,3 +116,68 @@ test("POST /manage/patients with a duplicate name redirects with an error, and G
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });
 });
+
+test("GET /manage lists providers, and POST creates/updates/deletes them", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const empty = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(empty.body, /No providers yet\./);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/manage/providers",
+    payload: { name: "CVS Pharmacy", category: "pharmacy" },
+  });
+  assert.equal(create.statusCode, 302);
+  assert.equal(create.headers.location, "/manage");
+
+  const afterCreate = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterCreate.body, /value="CVS Pharmacy"/);
+  assert.match(afterCreate.body, /<option value="pharmacy" selected>/);
+
+  const idMatch = afterCreate.body.match(/\/manage\/providers\/(\d+)\/update/);
+  assert.ok(idMatch, "expected a provider id in the rendered form action");
+  const id = idMatch[1];
+
+  await app.inject({
+    method: "POST",
+    url: `/manage/providers/${id}/update`,
+    payload: { name: "CVS", category: "other" },
+  });
+  const afterUpdate = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterUpdate.body, /value="CVS"/);
+  assert.match(afterUpdate.body, /<option value="other" selected>/);
+
+  await app.inject({
+    method: "POST",
+    url: `/manage/providers/${id}/delete`,
+  });
+  const afterDelete = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(afterDelete.body, /No providers yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /manage/providers with a blank name redirects with an error, and GET /manage shows it", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const blank = await app.inject({
+    method: "POST",
+    url: "/manage/providers",
+    payload: { name: "  ", category: "medical" },
+  });
+  assert.equal(blank.statusCode, 302);
+  assert.equal(blank.headers.location, "/manage?error=blank-provider-name");
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/manage?error=blank-provider-name",
+  });
+  assert.match(withError.body, /Provider name can't be blank\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});

@@ -2,6 +2,13 @@ import formbody from "@fastify/formbody";
 import Fastify, { type FastifyInstance } from "fastify";
 import { openDatabase } from "./db.js";
 import { createPatient, deletePatient, listPatients } from "./patients.js";
+import {
+  createProvider,
+  deleteProvider,
+  listProviders,
+  updateProvider,
+  type ProviderCategory,
+} from "./providers.js";
 import { renderHome } from "./views/home.js";
 import { renderManage } from "./views/manage.js";
 import { renderPlaceholder } from "./views/placeholder.js";
@@ -40,7 +47,13 @@ export function buildApp(
     async (request, reply) => {
       reply
         .type("text/html")
-        .send(renderManage(listPatients(db), request.query.error));
+        .send(
+          renderManage(
+            listPatients(db),
+            listProviders(db),
+            request.query.error,
+          ),
+        );
     },
   );
 
@@ -60,6 +73,47 @@ export function buildApp(
     "/manage/patients/:id/delete",
     async (request, reply) => {
       deletePatient(db, Number(request.params.id));
+      reply.redirect("/manage");
+    },
+  );
+
+  app.post<{ Body: { name: string; category: ProviderCategory } }>(
+    "/manage/providers",
+    async (request, reply) => {
+      const result = createProvider(
+        db,
+        request.body.name,
+        request.body.category,
+      );
+      if (result === "saved") {
+        reply.redirect("/manage");
+      } else {
+        reply.redirect(`/manage?error=${result}-provider-name`);
+      }
+    },
+  );
+
+  app.post<{
+    Params: { id: string };
+    Body: { name: string; category: ProviderCategory };
+  }>("/manage/providers/:id/update", async (request, reply) => {
+    const result = updateProvider(
+      db,
+      Number(request.params.id),
+      request.body.name,
+      request.body.category,
+    );
+    if (result === "saved") {
+      reply.redirect("/manage");
+    } else {
+      reply.redirect(`/manage?error=${result}-provider-name`);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/manage/providers/:id/delete",
+    async (request, reply) => {
+      deleteProvider(db, Number(request.params.id));
       reply.redirect("/manage");
     },
   );

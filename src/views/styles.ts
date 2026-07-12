@@ -79,12 +79,22 @@ export const baseStyles = `
   .card-header h2 { font-size: 12.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-soft); }
   .card-body { padding: 6px 0; }
 
+  /* ---------- manage grid ---------- */
+  .manage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; align-items: start; }
+
   /* ---------- manage rows ---------- */
   .manage-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13px; gap: 8px; }
   .manage-row:last-child { border-bottom: none; }
+  .manage-row-edit-form { flex: 1; display: flex; align-items: center; gap: 6px; }
+  .manage-row-edit-form input, .manage-row-edit-form select {
+    border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 6px 7px;
+  }
+  .manage-row-edit-form input { flex: 1; }
+  .manage-row-edit-form input:hover, .manage-row-edit-form select:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .manage-row-edit-form input:focus, .manage-row-edit-form select:focus { border-color: var(--accent); background: var(--surface); outline: none; }
 
   .inline-add { padding: 10px 16px; display: flex; gap: 6px; border-top: 1px solid var(--line); }
-  .inline-add input { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; background: var(--surface); }
+  .inline-add input, .inline-add select { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; background: var(--surface); }
 
   @media (max-width: 980px) {
     .topbar { padding: 0 18px; gap: 18px; }

@@ -108,6 +108,17 @@ export function updateVisit(
   return "saved";
 }
 
+export function updateVisitNotes(
+  db: Database.Database,
+  id: number,
+  notes?: string,
+): void {
+  db.prepare("UPDATE visits SET notes = ? WHERE id = ?").run(
+    normalizeNotes(notes),
+    id,
+  );
+}
+
 export function deleteVisit(db: Database.Database, id: number): void {
   db.prepare("DELETE FROM visits WHERE id = ?").run(id);
 }

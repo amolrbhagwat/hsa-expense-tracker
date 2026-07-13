@@ -35,6 +35,7 @@ export const baseStyles = `
   button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
   button { cursor: pointer; }
   a { color: var(--accent); }
+  code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
   /* ---------- shell / topbar ---------- */
@@ -155,8 +156,13 @@ export const baseStyles = `
   }
   .field-value input:hover, .field-value select:hover, .field-value textarea:hover { border-color: var(--accent); }
   .field-value input:focus, .field-value select:focus, .field-value textarea:focus { border-color: var(--accent); background: var(--surface); }
-  .upload-drop { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 14px; text-align: center; font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+  .field-value-static { display: block; padding: 6px 7px; font-size: 13.5px; font-weight: 500; color: var(--ink-soft); }
+  .lock-note { font-size: 11.5px; color: var(--ink-faint); font-style: italic; margin: 0 0 8px; }
   .panel-footer { padding: 12px 18px; border-top: 1px solid var(--line); text-align: right; }
+
+  .link-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 12.5px; }
+  .link-row .lr-main { font-weight: 600; word-break: break-all; }
+  .link-row .lr-meta { color: var(--ink-soft); font-size: 12px; }
 
   @media (max-width: 980px) {
     .topbar { padding: 0 18px; gap: 18px; }

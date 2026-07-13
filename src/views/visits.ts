@@ -80,13 +80,79 @@ function renderVisitCard(visit: VisitListItem): string {
     </div>`;
 }
 
+function renderStaticField(label: string, value: string): string {
+  return `
+    <div class="field-row">
+      <span class="field-label">${label}</span>
+      <span class="field-value-static">${value}</span>
+    </div>`;
+}
+
+function renderFileRow(visitId: number, filename: string): string {
+  return `
+    <div class="link-row">
+      <span class="lr-main">${escapeHtml(filename)}</span>
+      <a href="/visits/${visitId}/files/${encodeURIComponent(filename)}/open" target="_blank" class="lr-meta">Open</a>
+    </div>`;
+}
+
+function renderDocumentsSection(
+  editingVisit: Visit,
+  filesKey: string,
+  files: string[] | undefined,
+): string {
+  if (files === undefined) {
+    return `
+      <div class="panel-section">
+        <h3>Documents</h3>
+        <p class="empty-note">
+          Create <code>visit-files/${escapeHtml(filesKey)}</code> under the
+          data folder and drop files in. Once it exists, this visit's date,
+          patient, and provider lock, to keep the folder name accurate.
+        </p>
+      </div>`;
+  }
+  const rows =
+    files.map((filename) => renderFileRow(editingVisit.id, filename)).join("") ||
+    `<p class="empty-note">No files in this visit's folder yet.</p>`;
+  return `
+    <div class="panel-section">
+      <h3>Documents (${files.length})</h3>
+      ${rows}
+    </div>`;
+}
+
 function renderPanel(
   editingVisit: Visit,
   patients: Patient[],
   providers: Provider[],
+  filesKey: string,
+  files: string[] | undefined,
 ): string {
   const provider = providers.find((p) => p.id === editingVisit.providerId);
   const patient = patients.find((p) => p.id === editingVisit.patientId);
+  const locked = files !== undefined;
+
+  const detailFields = locked
+    ? `
+      ${renderStaticField("Date", formatDate(editingVisit.date))}
+      ${renderStaticField("Patient", patient ? escapeHtml(patient.name) : "")}
+      ${renderStaticField("Provider", provider ? escapeHtml(provider.name) : "")}
+      <p class="lock-note">Locked — a document folder exists for this visit. Remove the folder to edit date, patient, or provider again.</p>`
+    : `
+      <div class="field-row">
+        <span class="field-label">Date</span>
+        <span class="field-value"><input type="date" name="date" value="${escapeHtml(editingVisit.date)}"></span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Patient</span>
+        <span class="field-value"><select name="patientId">${patientOptions(patients, editingVisit.patientId)}</select></span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Provider</span>
+        <span class="field-value"><select name="providerId">${providerOptions(providers, editingVisit.providerId)}</select></span>
+      </div>`;
+
   return `
     <div class="scrim"></div>
     <aside class="panel">
@@ -100,18 +166,7 @@ function renderPanel(
       <div class="panel-body">
         <div class="panel-section">
           <form method="post" action="/visits/${editingVisit.id}/update">
-            <div class="field-row">
-              <span class="field-label">Date</span>
-              <span class="field-value"><input type="date" name="date" value="${escapeHtml(editingVisit.date)}"></span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">Patient</span>
-              <span class="field-value"><select name="patientId">${patientOptions(patients, editingVisit.patientId)}</select></span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">Provider</span>
-              <span class="field-value"><select name="providerId">${providerOptions(providers, editingVisit.providerId)}</select></span>
-            </div>
+            ${detailFields}
             <div class="field-row">
               <span class="field-label">Notes</span>
               <span class="field-value"><textarea name="notes" rows="2">${editingVisit.notes ? escapeHtml(editingVisit.notes) : ""}</textarea></span>
@@ -122,10 +177,7 @@ function renderPanel(
           </form>
         </div>
 
-        <div class="panel-section">
-          <h3>Documents (0)</h3>
-          <div class="upload-drop">Drop a file here or click to add a document</div>
-        </div>
+        ${renderDocumentsSection(editingVisit, filesKey, files)}
       </div>
       <div class="panel-footer">
         <form method="post" action="/visits/${editingVisit.id}/delete">
@@ -140,6 +192,8 @@ export function renderVisits(
   patients: Patient[],
   providers: Provider[],
   editingVisit?: Visit,
+  filesKey = "",
+  files?: string[],
   errorCode?: string,
 ): string {
   const cards =
@@ -166,7 +220,9 @@ export function renderVisits(
     ? `<div class="error-banner">${escapeHtml(errorMessage)}</div>`
     : "";
 
-  const panel = editingVisit ? renderPanel(editingVisit, patients, providers) : "";
+  const panel = editingVisit
+    ? renderPanel(editingVisit, patients, providers, filesKey, files)
+    : "";
 
   const content = `
     ${errorBanner}

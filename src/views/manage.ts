@@ -52,33 +52,44 @@ function accountTypeLabel(type: AccountType): string {
   return type === "personal" ? "Personal" : type.toUpperCase();
 }
 
+function accountBadgeClass(type: AccountType): string {
+  return type === "personal" ? "badge" : "badge badge-accent";
+}
+
+function deleteForm(action: string): string {
+  return `
+      <form method="post" action="${action}">
+        <button type="submit" class="btn-icon btn-icon-critical" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </form>`;
+}
+
 function renderPatientRow(patient: Patient): string {
   return `
     <div class="manage-row">
-      <span>${escapeHtml(patient.name)}</span>
-      <form method="post" action="/manage/patients/${patient.id}/delete">
-        <button type="submit" class="btn-icon" title="Delete">✕</button>
-      </form>
+      <span class="manage-row-name">${escapeHtml(patient.name)}</span>
+      ${deleteForm(`/manage/patients/${patient.id}/delete`)}
     </div>`;
 }
 
 function renderProviderRow(provider: Provider): string {
   return `
     <div class="manage-row">
-      <span>${escapeHtml(provider.name)} <span class="badge">${categoryLabel(provider.category)}</span></span>
-      <form method="post" action="/manage/providers/${provider.id}/delete">
-        <button type="submit" class="btn-icon" title="Delete">✕</button>
-      </form>
+      <span class="manage-row-name">${escapeHtml(provider.name)}</span>
+      <span class="badge">${categoryLabel(provider.category)}</span>
+      ${deleteForm(`/manage/providers/${provider.id}/delete`)}
     </div>`;
 }
 
 function renderAccountRow(account: Account): string {
   return `
     <div class="manage-row">
-      <span>${escapeHtml(account.name)} <span class="badge">${accountTypeLabel(account.type)}</span></span>
-      <form method="post" action="/manage/accounts/${account.id}/delete">
-        <button type="submit" class="btn-icon" title="Delete">✕</button>
-      </form>
+      <span class="manage-row-name">${escapeHtml(account.name)}</span>
+      <span class="${accountBadgeClass(account.type)}">${accountTypeLabel(account.type)}</span>
+      ${deleteForm(`/manage/accounts/${account.id}/delete`)}
     </div>`;
 }
 

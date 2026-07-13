@@ -27,8 +27,9 @@ export const baseStyles = `
   body {
     background: var(--paper); color: var(--ink); font-family: var(--font-body);
     font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  h1, h2, h3 { margin: 0; font-weight: 400; font-family: var(--font-display); }
+  h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
   button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
   button { cursor: pointer; }
   a { color: var(--accent); }
@@ -60,7 +61,7 @@ export const baseStyles = `
   }
 
   .topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
-  .topline h1 { font-size: 27px; }
+  .topline h1 { font-family: var(--font-display); font-size: 27px; }
   .topline .subtitle { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-soft); }
 
   /* ---------- buttons ---------- */
@@ -70,8 +71,12 @@ export const baseStyles = `
   }
   .btn:hover { border-color: var(--accent); color: var(--accent-strong); }
   .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn-icon { border: none; background: none; color: var(--ink-faint); padding: 4px 6px; border-radius: 6px; font-size: 14px; }
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: none; color: var(--ink-faint); padding: 5px; border-radius: 6px;
+  }
   .btn-icon:hover { color: var(--accent-strong); background: var(--accent-soft); }
+  .btn-icon-critical:hover { color: var(--critical); background: var(--critical-soft); }
 
   /* ---------- cards ---------- */
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; }
@@ -84,13 +89,15 @@ export const baseStyles = `
     font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
     background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--ink-soft);
   }
+  .badge-accent { background: var(--accent-soft); color: var(--accent-strong); border-color: transparent; }
 
   /* ---------- manage grid ---------- */
   .manage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; align-items: start; }
 
   /* ---------- manage rows ---------- */
-  .manage-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13px; gap: 8px; }
+  .manage-row { display: flex; align-items: center; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13px; gap: 8px; }
   .manage-row:last-child { border-bottom: none; }
+  .manage-row-name { flex: 1; }
 
   .inline-add { padding: 10px 16px; display: flex; gap: 6px; border-top: 1px solid var(--line); }
   .inline-add input, .inline-add select { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; background: var(--surface); }

@@ -72,7 +72,7 @@ test("GET /manage lists patients, and POST creates/deletes them", async () => {
   assert.equal(create.headers.location, "/manage");
 
   const afterCreate = await app.inject({ method: "GET", url: "/manage" });
-  assert.match(afterCreate.body, /<span>Kavi<\/span>/);
+  assert.match(afterCreate.body, /<span class="manage-row-name">Kavi<\/span>/);
 
   const idMatch = afterCreate.body.match(/\/manage\/patients\/(\d+)\/delete/);
   assert.ok(idMatch, "expected a patient id in the rendered form action");
@@ -135,8 +135,9 @@ test("GET /manage lists providers, and POST creates/deletes them", async () => {
   const afterCreate = await app.inject({ method: "GET", url: "/manage" });
   assert.match(
     afterCreate.body,
-    /CVS Pharmacy <span class="badge">Pharmacy<\/span>/,
+    /<span class="manage-row-name">CVS Pharmacy<\/span>/,
   );
+  assert.match(afterCreate.body, /<span class="badge">Pharmacy<\/span>/);
 
   const idMatch = afterCreate.body.match(/\/manage\/providers\/(\d+)\/delete/);
   assert.ok(idMatch, "expected a provider id in the rendered form action");
@@ -222,7 +223,11 @@ test("GET /manage lists accounts, and POST creates/deletes them", async () => {
   assert.equal(create.headers.location, "/manage");
 
   const afterCreate = await app.inject({ method: "GET", url: "/manage" });
-  assert.match(afterCreate.body, /Fidelity HSA <span class="badge">HSA<\/span>/);
+  assert.match(
+    afterCreate.body,
+    /<span class="manage-row-name">Fidelity HSA<\/span>/,
+  );
+  assert.match(afterCreate.body, /<span class="badge badge-accent">HSA<\/span>/);
 
   const idMatch = afterCreate.body.match(/\/manage\/accounts\/(\d+)\/delete/);
   assert.ok(idMatch, "expected an account id in the rendered form action");
@@ -234,6 +239,29 @@ test("GET /manage lists accounts, and POST creates/deletes them", async () => {
   });
   const afterDelete = await app.inject({ method: "GET", url: "/manage" });
   assert.match(afterDelete.body, /No accounts yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("account badges are accented for tax-advantaged types, plain for personal", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Fidelity HSA", type: "hsa" },
+  });
+  await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Chase Sapphire", type: "personal" },
+  });
+
+  const response = await app.inject({ method: "GET", url: "/manage" });
+  assert.match(response.body, /<span class="badge badge-accent">HSA<\/span>/);
+  assert.match(response.body, /<span class="badge">Personal<\/span>/);
 
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });

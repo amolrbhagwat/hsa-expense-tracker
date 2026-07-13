@@ -14,9 +14,17 @@ import {
   listProviders,
   type ProviderCategory,
 } from "./providers.js";
+import {
+  createVisit,
+  deleteVisit,
+  getVisit,
+  listVisits,
+  updateVisit,
+} from "./visits.js";
 import { renderHome } from "./views/home.js";
 import { renderManage } from "./views/manage.js";
 import { renderPlaceholder } from "./views/placeholder.js";
+import { renderVisits } from "./views/visits.js";
 
 export function buildApp(
   dataDir: string,
@@ -39,9 +47,69 @@ export function buildApp(
     reply.type("text/html").send(renderPlaceholder("payments", "Payments"));
   });
 
-  app.get("/visits", async (_request, reply) => {
-    reply.type("text/html").send(renderPlaceholder("visits", "Visits"));
+  app.get<{ Querystring: { edit?: string; error?: string } }>(
+    "/visits",
+    async (request, reply) => {
+      const editId = request.query.edit ? Number(request.query.edit) : undefined;
+      const editingVisit = editId ? getVisit(db, editId) : undefined;
+      reply
+        .type("text/html")
+        .send(
+          renderVisits(
+            listVisits(db),
+            listPatients(db),
+            listProviders(db),
+            editingVisit,
+            request.query.error,
+          ),
+        );
+    },
+  );
+
+  app.post<{
+    Body: { date: string; patientId: string; providerId: string; notes?: string };
+  }>("/visits", async (request, reply) => {
+    const result = createVisit(
+      db,
+      request.body.date,
+      Number(request.body.patientId),
+      Number(request.body.providerId),
+      request.body.notes,
+    );
+    if (result === "saved") {
+      reply.redirect("/visits");
+    } else {
+      reply.redirect(`/visits?error=${result}`);
+    }
   });
+
+  app.post<{
+    Params: { id: string };
+    Body: { date: string; patientId: string; providerId: string; notes?: string };
+  }>("/visits/:id/update", async (request, reply) => {
+    const id = Number(request.params.id);
+    const result = updateVisit(
+      db,
+      id,
+      request.body.date,
+      Number(request.body.patientId),
+      Number(request.body.providerId),
+      request.body.notes,
+    );
+    if (result === "saved") {
+      reply.redirect("/visits");
+    } else {
+      reply.redirect(`/visits?edit=${id}&error=${result}`);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/visits/:id/delete",
+    async (request, reply) => {
+      deleteVisit(db, Number(request.params.id));
+      reply.redirect("/visits");
+    },
+  );
 
   app.get("/reimbursements", async (_request, reply) => {
     reply.type("text/html").send(renderPlaceholder("reimbursements", "Reimbursements"));

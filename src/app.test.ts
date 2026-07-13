@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import type { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 
 test("GET /health returns ok", async () => {
@@ -35,7 +36,6 @@ test("GET / renders the home page as HTML", async () => {
 
 for (const [url, heading] of [
   ["/payments", "Payments"],
-  ["/visits", "Visits"],
   ["/reimbursements", "Reimbursements"],
 ] as const) {
   test(`GET ${url} renders the ${heading} placeholder with its tab active`, async () => {
@@ -290,6 +290,139 @@ test("POST /manage/accounts with a duplicate name redirects with an error, and G
     url: "/manage?error=duplicate-account-name",
   });
   assert.match(withError.body, /An account with that name already exists\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+async function seedPatientAndProvider(app: FastifyInstance) {
+  await app.inject({
+    method: "POST",
+    url: "/manage/patients",
+    payload: { name: "Kavi" },
+  });
+  await app.inject({
+    method: "POST",
+    url: "/manage/providers",
+    payload: { name: "Dr. Sam Okafor", category: "medical" },
+  });
+  const manage = await app.inject({ method: "GET", url: "/manage" });
+  const patientId = manage.body.match(/\/manage\/patients\/(\d+)\/delete/)![1];
+  const providerId = manage.body.match(/\/manage\/providers\/(\d+)\/delete/)![1];
+  return { patientId, providerId };
+}
+
+test("GET /visits shows a message when no patients/providers exist yet", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const response = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(response.body, /No visits yet\./);
+  assert.match(response.body, /Add a patient and provider first, in Manage\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("GET /visits lists visits, and POST creates/updates/deletes them", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId } = await seedPatientAndProvider(app);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/visits",
+    payload: { date: "2026-06-01", patientId, providerId },
+  });
+  assert.equal(create.statusCode, 302);
+  assert.equal(create.headers.location, "/visits");
+
+  const afterCreate = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(afterCreate.body, /Jun 1, 2026/);
+  assert.match(afterCreate.body, /Kavi/);
+  assert.match(afterCreate.body, /Dr\. Sam Okafor/);
+
+  const idMatch = afterCreate.body.match(/\/visits\?edit=(\d+)/);
+  assert.ok(idMatch, "expected a visit id in the rendered edit link");
+  const id = idMatch[1];
+
+  const editPage = await app.inject({ method: "GET", url: `/visits?edit=${id}` });
+  assert.match(editPage.body, /<h2>Dr\. Sam Okafor<\/h2>/);
+  assert.match(editPage.body, /<span class="ptsub">Kavi · Jun 1, 2026<\/span>/);
+  assert.match(editPage.body, /value="2026-06-01"/);
+
+  const update = await app.inject({
+    method: "POST",
+    url: `/visits/${id}/update`,
+    payload: { date: "2026-06-15", patientId, providerId },
+  });
+  assert.equal(update.statusCode, 302);
+  assert.equal(update.headers.location, "/visits");
+
+  const afterUpdate = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(afterUpdate.body, /Jun 15, 2026/);
+  assert.doesNotMatch(afterUpdate.body, /Jun 1, 2026/);
+
+  await app.inject({ method: "POST", url: `/visits/${id}/delete` });
+  const afterDelete = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(afterDelete.body, /No visits yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /visits with a blank date redirects with an error, and GET /visits shows it", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId } = await seedPatientAndProvider(app);
+
+  const blank = await app.inject({
+    method: "POST",
+    url: "/visits",
+    payload: { date: "  ", patientId, providerId },
+  });
+  assert.equal(blank.statusCode, 302);
+  assert.equal(blank.headers.location, "/visits?error=blank-date");
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/visits?error=blank-date",
+  });
+  assert.match(withError.body, /Visit date can't be blank\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("Visit cards only show a notes line once a visit has notes", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId } = await seedPatientAndProvider(app);
+
+  await app.inject({
+    method: "POST",
+    url: "/visits",
+    payload: { date: "2026-06-01", patientId, providerId },
+  });
+
+  const withoutNotes = await app.inject({ method: "GET", url: "/visits" });
+  assert.doesNotMatch(withoutNotes.body, /class="visit-notes"/);
+  assert.match(withoutNotes.body, /No payment recorded for this visit yet/);
+  assert.match(withoutNotes.body, /No reimbursement recorded for this visit yet/);
+
+  await app.inject({
+    method: "POST",
+    url: "/visits",
+    payload: {
+      date: "2026-06-10",
+      patientId,
+      providerId,
+      notes: "Discussed follow-up",
+    },
+  });
+
+  const withNotes = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(withNotes.body, /class="visit-notes">Discussed follow-up</);
 
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });

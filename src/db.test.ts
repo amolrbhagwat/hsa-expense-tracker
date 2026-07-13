@@ -29,7 +29,6 @@ test("openDatabase creates every table from the migrations", () => {
     "reimbursement_payments",
     "reimbursements",
     "schema_migrations",
-    "visit_documents",
     "visits",
   ]);
 

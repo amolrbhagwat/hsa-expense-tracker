@@ -109,14 +109,26 @@ export const baseStyles = `
   .inline-add input, .inline-add select { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; background: var(--surface); }
 
   /* ---------- data tables ---------- */
-  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
   .data-table th {
     text-align: left; padding: 8px 16px; border-bottom: 1px solid var(--line);
     font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft);
   }
-  .data-table td { padding: 9px 16px; border-bottom: 1px solid var(--line); }
+  .data-table td { padding: 9px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   .data-table tr:last-child td { border-bottom: none; }
   .data-table td.actions { display: flex; gap: 2px; justify-content: flex-end; }
+  .data-table td.num, .data-table th.num { text-align: right; }
+  .row-links { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+
+  /* ---------- pills ---------- */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill-neutral { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+  .pill-warn { background: var(--warning-soft); color: var(--warning); }
+  .pill-good { background: var(--success-soft); color: var(--success); }
+
+  .empty-note { font-size: 12.5px; color: var(--ink-faint); font-style: italic; }
 
   /* ---------- quick add ---------- */
   .quickadd { background: var(--accent-soft); border: 1px dashed var(--accent); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }

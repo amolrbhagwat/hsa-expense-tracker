@@ -34,10 +34,7 @@ test("GET / renders the home page as HTML", async () => {
   rmSync(dataDir, { recursive: true, force: true });
 });
 
-for (const [url, heading] of [
-  ["/payments", "Payments"],
-  ["/reimbursements", "Reimbursements"],
-] as const) {
+for (const [url, heading] of [["/reimbursements", "Reimbursements"]] as const) {
   test(`GET ${url} renders the ${heading} placeholder with its tab active`, async () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
     const app = buildApp(dataDir, { logger: false });
@@ -579,6 +576,157 @@ test("GET /visits/:id/files/:filename/open rejects filenames containing a slash"
     url: `/visits/${visitId}/files/${encodeURIComponent("../secret.txt")}/open`,
   });
   assert.equal(open.statusCode, 400);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+async function seedPatientProviderAccount(app: FastifyInstance) {
+  const { patientId, providerId } = await seedPatientAndProvider(app);
+  await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Chase Sapphire", type: "personal" },
+  });
+  const manage = await app.inject({ method: "GET", url: "/manage" });
+  const accountId = manage.body.match(/\/manage\/accounts\/(\d+)\/delete/)![1];
+  return { patientId, providerId, accountId };
+}
+
+test("GET /payments shows a message when no patients/providers/accounts exist yet", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+
+  const response = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(response.body, /No payments yet\./);
+  assert.match(response.body, /Add a patient, provider, and account first, in Manage\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("GET /payments lists payments, and POST creates/updates/deletes them", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId, accountId } = await seedPatientProviderAccount(app);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/payments",
+    payload: { date: "2026-06-01", amount: "42.30", patientId, providerId, accountId },
+  });
+  assert.equal(create.statusCode, 302);
+  assert.equal(create.headers.location, "/payments");
+
+  const afterCreate = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterCreate.body, /Jun 1, 2026/);
+  assert.match(afterCreate.body, /Kavi/);
+  assert.match(afterCreate.body, /Dr\. Sam Okafor/);
+  assert.match(afterCreate.body, /\$42\.30/);
+  assert.match(afterCreate.body, /Reimbursable/);
+
+  const idMatch = afterCreate.body.match(/\/payments\?edit=(\d+)/);
+  assert.ok(idMatch, "expected a payment id in the rendered edit link");
+  const id = idMatch[1];
+
+  const editPage = await app.inject({ method: "GET", url: `/payments?edit=${id}` });
+  assert.match(editPage.body, /<h2>Dr\. Sam Okafor<\/h2>/);
+  assert.match(editPage.body, /<span class="ptsub">Kavi · Jun 1, 2026<\/span>/);
+  assert.match(editPage.body, /value="42\.30"/);
+
+  const update = await app.inject({
+    method: "POST",
+    url: `/payments/${id}/update`,
+    payload: { date: "2026-06-15", amount: "50.00", patientId, providerId, accountId },
+  });
+  assert.equal(update.statusCode, 302);
+  assert.equal(update.headers.location, "/payments");
+
+  const afterUpdate = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterUpdate.body, /Jun 15, 2026/);
+  assert.match(afterUpdate.body, /\$50\.00/);
+  assert.doesNotMatch(afterUpdate.body, /Jun 1, 2026/);
+
+  await app.inject({ method: "POST", url: `/payments/${id}/delete` });
+  const afterDelete = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterDelete.body, /No payments yet\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("POST /payments with a blank date or invalid amount redirects with an error", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId, accountId } = await seedPatientProviderAccount(app);
+
+  const blankDate = await app.inject({
+    method: "POST",
+    url: "/payments",
+    payload: { date: "  ", amount: "42.30", patientId, providerId, accountId },
+  });
+  assert.equal(blankDate.headers.location, "/payments?error=blank-date");
+
+  const badAmount = await app.inject({
+    method: "POST",
+    url: "/payments",
+    payload: { date: "2026-06-01", amount: "0", patientId, providerId, accountId },
+  });
+  assert.equal(badAmount.headers.location, "/payments?error=invalid-amount");
+
+  const withError = await app.inject({
+    method: "GET",
+    url: "/payments?error=invalid-amount",
+  });
+  assert.match(withError.body, /Enter a valid amount greater than zero\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("a payment locks once a Receipt or Reimbursement references it, but notes stay editable", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId, accountId } = await seedPatientProviderAccount(app);
+
+  await app.inject({
+    method: "POST",
+    url: "/payments",
+    payload: { date: "2026-06-01", amount: "42.30", patientId, providerId, accountId },
+  });
+  const afterCreate = await app.inject({ method: "GET", url: "/payments" });
+  const id = afterCreate.body.match(/\/payments\?edit=(\d+)/)![1];
+
+  app.db.prepare("INSERT INTO receipts (id, file_path) VALUES (1, 'x')").run();
+  app.db
+    .prepare("INSERT INTO receipt_payments (receipt_id, payment_id) VALUES (1, ?)")
+    .run(Number(id));
+
+  const editPage = await app.inject({ method: "GET", url: `/payments?edit=${id}` });
+  assert.match(editPage.body, /Locked — a Receipt or Reimbursement references this payment\./);
+  assert.match(editPage.body, /class="field-value-static">\$42\.30</);
+
+  const update = await app.inject({
+    method: "POST",
+    url: `/payments/${id}/update`,
+    payload: {
+      date: "2026-09-01",
+      amount: "999.00",
+      patientId,
+      providerId,
+      accountId,
+      notes: "Reviewed against the receipt",
+    },
+  });
+  assert.equal(update.statusCode, 302);
+
+  const afterUpdate = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterUpdate.body, /Jun 1, 2026/);
+  assert.match(afterUpdate.body, /\$42\.30/);
+  assert.doesNotMatch(afterUpdate.body, /\$999\.00/);
+
+  const editAfterUpdate = await app.inject({ method: "GET", url: `/payments?edit=${id}` });
+  assert.match(editAfterUpdate.body, /Reviewed against the receipt/);
 
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });

@@ -11,7 +11,12 @@ Money paid to a provider for a qualified medical cost. Its funding Account
 determines whether it's already settled (paid from a tax-advantaged
 account) or eligible for later Reimbursement (paid from a personal
 account). Has a Patient — who the payment was for — and a Provider — who it
-was paid to.
+was paid to. Editable freely until a Receipt or Reimbursement links to it —
+at that point all fields lock except notes, since a Reimbursement's
+allocation and a Receipt's proof are both fixed against the Payment's
+details as they stood at linking time, and neither is expected to come
+back and revisit that. Correcting a locked Payment means deleting the
+Receipt or Reimbursement referencing it first.
 _Avoid_: Expense, purchase, transaction
 
 **Account**:

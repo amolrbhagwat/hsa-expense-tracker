@@ -11,6 +11,15 @@ import {
 import { openDatabase } from "./db.js";
 import { createPatient, deletePatient, listPatients } from "./patients.js";
 import {
+  createPayment,
+  deletePayment,
+  getPayment,
+  isPaymentLocked,
+  listPayments,
+  updatePayment,
+  updatePaymentNotes,
+} from "./payments.js";
+import {
   createProvider,
   deleteProvider,
   listProviders,
@@ -33,6 +42,7 @@ import {
 } from "./visits.js";
 import { renderHome } from "./views/home.js";
 import { renderManage } from "./views/manage.js";
+import { renderPayments } from "./views/payments.js";
 import { renderPlaceholder } from "./views/placeholder.js";
 import { renderVisits } from "./views/visits.js";
 
@@ -53,9 +63,102 @@ export function buildApp(
     reply.type("text/html").send(renderHome());
   });
 
-  app.get("/payments", async (_request, reply) => {
-    reply.type("text/html").send(renderPlaceholder("payments", "Payments"));
+  app.get<{ Querystring: { edit?: string; error?: string } }>(
+    "/payments",
+    async (request, reply) => {
+      const editId = request.query.edit ? Number(request.query.edit) : undefined;
+      const editingPayment = editId ? getPayment(db, editId) : undefined;
+      const locked = editingPayment ? isPaymentLocked(db, editingPayment.id) : false;
+      reply
+        .type("text/html")
+        .send(
+          renderPayments(
+            listPayments(db),
+            listPatients(db),
+            listProviders(db),
+            listAccounts(db),
+            editingPayment,
+            locked,
+            request.query.error,
+          ),
+        );
+    },
+  );
+
+  app.post<{
+    Body: {
+      date: string;
+      amount: string;
+      patientId: string;
+      providerId: string;
+      accountId: string;
+      notes?: string;
+    };
+  }>("/payments", async (request, reply) => {
+    const result = createPayment(
+      db,
+      request.body.date,
+      request.body.amount,
+      Number(request.body.patientId),
+      Number(request.body.providerId),
+      Number(request.body.accountId),
+      request.body.notes,
+    );
+    if (result === "saved") {
+      reply.redirect("/payments");
+    } else {
+      reply.redirect(`/payments?error=${result}`);
+    }
   });
+
+  app.post<{
+    Params: { id: string };
+    Body: {
+      date: string;
+      amount: string;
+      patientId: string;
+      providerId: string;
+      accountId: string;
+      notes?: string;
+    };
+  }>("/payments/:id/update", async (request, reply) => {
+    const id = Number(request.params.id);
+    const current = getPayment(db, id);
+    if (!current) {
+      reply.code(404).send("Payment not found");
+      return;
+    }
+
+    if (isPaymentLocked(db, id)) {
+      updatePaymentNotes(db, id, request.body.notes);
+      reply.redirect("/payments");
+      return;
+    }
+
+    const result = updatePayment(
+      db,
+      id,
+      request.body.date,
+      request.body.amount,
+      Number(request.body.patientId),
+      Number(request.body.providerId),
+      Number(request.body.accountId),
+      request.body.notes,
+    );
+    if (result === "saved") {
+      reply.redirect("/payments");
+    } else {
+      reply.redirect(`/payments?edit=${id}&error=${result}`);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/payments/:id/delete",
+    async (request, reply) => {
+      deletePayment(db, Number(request.params.id));
+      reply.redirect("/payments");
+    },
+  );
 
   function filesKeyFor(visit: Visit): string {
     const patient = listPatients(db).find((p) => p.id === visit.patientId);

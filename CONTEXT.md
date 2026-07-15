@@ -75,7 +75,9 @@ amount of $0 once fully paid back.
 _Avoid_: Outstanding balance, balance due
 
 **Receipt**:
-A file documenting one or more Payments, with its own date (when it was
+One or more files depicting the same document (e.g. a blurry retake, or a
+photo of the front and back) — not a bundle of unrelated documents —
+documenting one or more Payments, with its own date (when it was
 generated or received, not derived from any linked Payment) and Provider
 (chosen as whichever fits best when the receipt covers payments to more
 than one Provider — e.g. a hospital's consolidated statement spanning an
@@ -83,7 +85,9 @@ ER visit and a follow-up consult recorded under two different Provider
 records). Many-to-many with Payment — a single receipt can cover several
 payments (e.g. a provider's ongoing summary or payment history), and a
 single payment can have more than one receipt (e.g. a provider's later
-receipt that also references a prior payment). Non-editable after
-creation, like Patient/Provider/Account — delete and re-create to correct
-a mistake — except for notes, which stay editable.
+receipt that also references a prior payment). A substantively different
+document — a different date, or covering a different set of Payments —
+always gets its own Receipt, never added alongside an existing one.
+Non-editable after creation, like Patient/Provider/Account — delete and
+re-create to correct a mistake — except for notes, which stay editable.
 _Avoid_: Invoice, proof, document

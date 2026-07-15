@@ -4,6 +4,7 @@ export type Tab =
   | "dashboard"
   | "payments"
   | "visits"
+  | "receipts"
   | "reimbursements"
   | "manage";
 
@@ -11,6 +12,7 @@ const TABS: { id: Tab; label: string; href: string }[] = [
   { id: "dashboard", label: "Dashboard", href: "/" },
   { id: "visits", label: "Visits", href: "/visits" },
   { id: "payments", label: "Payments", href: "/payments" },
+  { id: "receipts", label: "Receipts", href: "/receipts" },
   { id: "reimbursements", label: "Reimbursements", href: "/reimbursements" },
   { id: "manage", label: "Manage", href: "/manage" },
 ];

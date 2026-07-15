@@ -12,14 +12,23 @@ yet, that column has never been read or written by any released version — same
 implemented (it gets its own content screen, like Visit — not a Manage card,
 since it's a growing log, not a small picklist).
 
-Each receipt expects its file at
-`<dataDir>/receipt-files/<date>-<provider>-<disambiguator>/` — one file per
-folder. Unlike Visit's folder listing (which can hold several files), a Receipt
-folder holds exactly one, matching the glossary's literal definition of Receipt
-as *a file*. Using a directory rather than a bare filename still means the app
-never needs to know the file's extension — it just opens whatever single file is
-there. If the folder doesn't exist, the receipt's Files section shows the
-expected key as a hint, same as Visit.
+Each receipt expects its file(s) at
+`<dataDir>/receipt-files/<date>-<provider>-<disambiguator>/`. Like Visit's
+folder listing, a Receipt folder can hold more than one file — but unlike
+Visit, where the files can be any documents relevant to the visit, a Receipt's
+files must all depict the *same* document (e.g. a blurry retake, or a photo of
+the front and back), matching the glossary's definition of Receipt as one or
+more files depicting the same document. A second, substantively different
+document — a different date, or covering a different set of Payments — gets
+its own Receipt row (and its own folder), never a second file dropped into an
+existing one. The app has no way to enforce that distinction — it's a judgment
+call left to whoever files the receipt, the same way the disambiguator already
+is. (The implementation already matched this: `listReceiptFiles` and the Files
+section render a listing, not a single-file assumption, so this is a
+correction to this ADR's original text, not a code change.) Using a directory
+rather than a bare filename still means the app never needs to know a file's
+extension — it just lists whatever is there. If the folder doesn't exist, the
+receipt's Files section shows the expected key as a hint, same as Visit.
 
 The row's own `id` stays the primary key (used to fetch/link the row
 everywhere else) but is deliberately **not** part of the folder path.

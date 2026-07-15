@@ -131,7 +131,9 @@ test("a payment is unlocked until a Receipt or Reimbursement links to it", () =>
   const [payment] = listPayments(db);
   assert.equal(isPaymentLocked(db, payment!.id), false);
 
-  db.prepare("INSERT INTO receipts (id, file_path) VALUES (1, 'x')").run();
+  db.prepare(
+    "INSERT INTO receipts (id, date, provider_id, disambiguator) VALUES (1, '2026-06-02', ?, 'receipt')",
+  ).run(providerId);
   db.prepare(
     "INSERT INTO receipt_payments (receipt_id, payment_id) VALUES (1, ?)",
   ).run(payment!.id);

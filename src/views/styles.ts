@@ -66,6 +66,7 @@ export const baseStyles = `
   .topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .topline h1 { font-family: var(--font-display); font-size: 27px; }
   .topline .subtitle { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-soft); }
+  .topline .actions { display: flex; gap: 8px; }
 
   /* ---------- buttons ---------- */
   .btn {
@@ -138,6 +139,7 @@ export const baseStyles = `
   .quickadd-row input[type="date"] { width: 135px; }
   .quickadd-row input[type="text"] { flex: 1; min-width: 140px; }
   .quickadd-hint { margin-top: 7px; font-size: 11.5px; color: var(--accent-strong); opacity: .85; }
+  .quickadd-picker { max-height: 160px; overflow-y: auto; margin-top: 10px; border-top: 1px solid var(--line-strong); background: var(--surface); border-radius: 7px; padding: 8px 10px; }
 
   /* ---------- visit cards ---------- */
   .visit-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
@@ -175,6 +177,13 @@ export const baseStyles = `
   .link-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 12.5px; }
   .link-row .lr-main { font-weight: 600; word-break: break-all; }
   .link-row .lr-meta { color: var(--ink-soft); font-size: 12px; }
+
+  /* ---------- payment picker ---------- */
+  .pay-pick-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; cursor: pointer; }
+  .pay-pick-row:last-child { border-bottom: none; }
+  .pay-pick-row .pp-info { flex: 1; }
+  .pay-pick-row .pp-main { font-weight: 600; }
+  .pay-pick-row .pp-meta { color: var(--ink-soft); font-size: 11.5px; }
 
   @media (max-width: 980px) {
     .topbar { padding: 0 18px; gap: 18px; }

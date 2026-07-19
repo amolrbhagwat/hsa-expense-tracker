@@ -46,9 +46,9 @@ function providerOptions(providers: Provider[], selectedId?: number): string {
     .join("");
 }
 
-function editIcon(): string {
+function openIcon(): string {
   return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M11 2L14 5L5 14H2V11L11 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
 
@@ -72,7 +72,7 @@ function renderReceiptRow(receipt: ReceiptListItem): string {
       <td>${escapeHtml(receipt.providerName)} <span class="badge">${categoryLabel(receipt.providerCategory)}</span></td>
       <td>${escapeHtml(receipt.disambiguator)}</td>
       <td>${receipt.paymentCount} payment${receipt.paymentCount === 1 ? "" : "s"}</td>
-      <td><a href="/receipts?view=${receipt.id}" class="btn-icon" title="View receipt">${editIcon()}</a></td>
+      <td><a href="/receipts?view=${receipt.id}" class="btn-icon" title="View receipt">${openIcon()}</a></td>
     </tr>`;
 }
 

@@ -840,6 +840,73 @@ test("linking a Receipt to a Payment shows up on the Payment side, in the table 
   rmSync(dataDir, { recursive: true, force: true });
 });
 
+test("linking a Visit to a Payment shows up on both sides, and stays editable even when the payment is locked", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { patientId, providerId, accountId, paymentId } = await seedPayment(app);
+
+  await app.inject({
+    method: "POST",
+    url: "/visits",
+    payload: { date: "2026-05-20", patientId, providerId },
+  });
+  const visitsAfterCreate = await app.inject({ method: "GET", url: "/visits" });
+  const visitId = visitsAfterCreate.body.match(/\/visits\?edit=(\d+)/)![1];
+  assert.match(visitsAfterCreate.body, /No payment recorded for this visit yet/);
+
+  const editBeforeLink = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editBeforeLink.body, /<h3>Visits \(0\)<\/h3>/);
+
+  const link = await app.inject({
+    method: "POST",
+    url: `/payments/${paymentId}/update`,
+    payload: {
+      date: "2026-06-01",
+      amount: "42.30",
+      patientId,
+      providerId,
+      accountId,
+      visitIds: [visitId],
+    },
+  });
+  assert.equal(link.statusCode, 302);
+
+  const editAfterLink = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editAfterLink.body, /<h3>Visits \(1\)<\/h3>/);
+
+  const paymentsAfterLink = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(paymentsAfterLink.body, /<td class="row-links">1 visit<\/td>/);
+
+  const visitsAfterLink = await app.inject({ method: "GET", url: "/visits" });
+  assert.doesNotMatch(visitsAfterLink.body, /No payment recorded for this visit yet/);
+  assert.match(visitsAfterLink.body, /class="chip">\$42\.30 · Jun 1, 2026/);
+
+  // Lock the payment with a Receipt, and confirm the visit link still saves.
+  await app.inject({
+    method: "POST",
+    url: "/receipts",
+    payload: { date: "2026-06-02", providerId, paymentIds: paymentId },
+  });
+  const editLocked = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editLocked.body, /Locked — a Receipt or Reimbursement references this payment\./);
+
+  const unlink = await app.inject({
+    method: "POST",
+    url: `/payments/${paymentId}/update`,
+    payload: { notes: "still locked" },
+  });
+  assert.equal(unlink.statusCode, 302);
+
+  const editAfterUnlink = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editAfterUnlink.body, /<h3>Visits \(0\)<\/h3>/);
+
+  const visitsAfterUnlink = await app.inject({ method: "GET", url: "/visits" });
+  assert.match(visitsAfterUnlink.body, /No payment recorded for this visit yet/);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
 test("POST /receipts rejects a blank date, zero payments, or a duplicate combination", async () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
   const app = buildApp(dataDir, { logger: false });

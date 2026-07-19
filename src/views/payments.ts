@@ -3,6 +3,7 @@ import type { Patient } from "../patients.js";
 import type { Payment, PaymentListItem } from "../payments.js";
 import type { Provider, ProviderCategory } from "../providers.js";
 import type { LinkedReceipt } from "../receipts.js";
+import type { VisitListItem } from "../visits.js";
 import { layout } from "./layout.js";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -103,6 +104,17 @@ function closeIcon(): string {
   </svg>`;
 }
 
+function linksSummary(payment: PaymentListItem): string {
+  const parts: string[] = [];
+  if (payment.visitCount > 0) {
+    parts.push(`${payment.visitCount} visit${payment.visitCount === 1 ? "" : "s"}`);
+  }
+  if (payment.receiptCount > 0) {
+    parts.push(`${payment.receiptCount} receipt${payment.receiptCount === 1 ? "" : "s"}`);
+  }
+  return parts.length === 0 ? "—" : parts.join(" · ");
+}
+
 function renderPaymentRow(payment: PaymentListItem): string {
   return `
     <tr>
@@ -113,7 +125,7 @@ function renderPaymentRow(payment: PaymentListItem): string {
       <td class="num">${formatMoney(payment.amountCents)}</td>
       <td>${statusPill(payment.accountType)}</td>
       <td class="row-links">—</td>
-      <td class="row-links">${payment.receiptCount === 0 ? "—" : `${payment.receiptCount} receipt${payment.receiptCount === 1 ? "" : "s"}`}</td>
+      <td class="row-links">${linksSummary(payment)}</td>
       <td><a href="/payments?edit=${payment.id}" class="btn-icon" title="Edit payment">${editIcon()}</a></td>
     </tr>`;
 }
@@ -140,7 +152,7 @@ function renderDetailFields(
   return `
     <div class="field-row"><span class="field-label">Amount</span><span class="field-value"><input type="text" name="amount" value="${(editingPayment.amountCents / 100).toFixed(2)}"></span></div>
     <div class="field-row"><span class="field-label">Date</span><span class="field-value"><input type="date" name="date" value="${escapeHtml(editingPayment.date)}"></span></div>
-    <div class="field-row"><span class="field-label">Patient</span><span class="field-value"><select name="patientId">${patientOptions(patients, editingPayment.patientId)}</select></span></div>
+    <div class="field-row"><span class="field-label">Patient</span><span class="field-value"><select name="patientId" onchange="filterPaymentVisits(this.value)">${patientOptions(patients, editingPayment.patientId)}</select></span></div>
     <div class="field-row"><span class="field-label">Provider</span><span class="field-value"><select name="providerId">${providerOptions(providers, editingPayment.providerId)}</select></span></div>
     <div class="field-row"><span class="field-label">Account</span><span class="field-value"><select name="accountId">${accountOptions(accounts, editingPayment.accountId)}</select></span></div>`;
 }
@@ -160,6 +172,63 @@ function renderLinkedReceipts(linkedReceipts: LinkedReceipt[]): string {
     .join("");
 }
 
+function visitPickerRows(
+  visits: VisitListItem[],
+  linkedVisitIds: number[],
+  selectedPatientId: number,
+): string {
+  return visits
+    .map((visit) => {
+      const hidden = visit.patientId !== selectedPatientId;
+      const checked = linkedVisitIds.includes(visit.id);
+      return `
+      <label class="pay-pick-row" data-patient-id="${visit.patientId}"${hidden ? ' style="display:none"' : ""}>
+        <input type="checkbox" name="visitIds" form="payment-form" value="${visit.id}"${checked ? " checked" : ""}>
+        <div class="pp-info">
+          <div class="pp-main">${escapeHtml(visit.providerName)}</div>
+          <div class="pp-meta">${formatDate(visit.date)}</div>
+        </div>
+      </label>`;
+    })
+    .join("");
+}
+
+function renderVisitsSection(
+  visits: VisitListItem[],
+  linkedVisitIds: number[],
+  selectedPatientId: number,
+): string {
+  if (visits.length === 0) {
+    return `
+      <div class="panel-section">
+        <h3>Visits (${linkedVisitIds.length})</h3>
+        <p class="empty-note">No visits recorded yet.</p>
+      </div>`;
+  }
+  const anyForPatient = visits.some((v) => v.patientId === selectedPatientId);
+  return `
+    <div class="panel-section">
+      <h3>Visits (${linkedVisitIds.length})</h3>
+      <div class="quickadd-picker" id="payment-visit-picker"${anyForPatient ? "" : ' style="display:none"'}>
+        ${visitPickerRows(visits, linkedVisitIds, selectedPatientId)}
+      </div>
+      <p class="empty-note" id="payment-visit-picker-empty"${anyForPatient ? ' style="display:none"' : ""}>No visits for this patient yet.</p>
+    </div>
+    <script>
+      function filterPaymentVisits(patientId) {
+        var picker = document.getElementById("payment-visit-picker");
+        var any = false;
+        picker.querySelectorAll(".pay-pick-row").forEach(function (row) {
+          var show = row.dataset.patientId === patientId;
+          row.style.display = show ? "" : "none";
+          if (show) any = true;
+        });
+        picker.style.display = any ? "" : "none";
+        document.getElementById("payment-visit-picker-empty").style.display = any ? "none" : "";
+      }
+    </script>`;
+}
+
 function renderPanel(
   editingPayment: Payment,
   patients: Patient[],
@@ -167,6 +236,8 @@ function renderPanel(
   accounts: Account[],
   locked: boolean,
   linkedReceipts: LinkedReceipt[],
+  visits: VisitListItem[],
+  linkedVisitIds: number[],
 ): string {
   const patient = patients.find((p) => p.id === editingPayment.patientId);
   const provider = providers.find((p) => p.id === editingPayment.providerId);
@@ -184,7 +255,7 @@ function renderPanel(
       </div>
       <div class="panel-body">
         <div class="panel-section">
-          <form method="post" action="/payments/${editingPayment.id}/update">
+          <form method="post" action="/payments/${editingPayment.id}/update" id="payment-form">
             ${renderDetailFields(editingPayment, patients, providers, accounts, locked)}
             <div class="field-row"><span class="field-label">Notes</span><span class="field-value"><textarea name="notes" rows="2">${editingPayment.notes ? escapeHtml(editingPayment.notes) : ""}</textarea></span></div>
             <div style="text-align:right; margin-top:10px;">
@@ -198,10 +269,7 @@ function renderPanel(
           ${account ? statusPill(account.type) : ""}
         </div>
 
-        <div class="panel-section">
-          <h3>Visits</h3>
-          <p class="empty-note">Linking visits will be added later.</p>
-        </div>
+        ${renderVisitsSection(visits, linkedVisitIds, editingPayment.patientId)}
 
         <div class="panel-section">
           <h3>Reimbursements</h3>
@@ -230,6 +298,8 @@ export function renderPayments(
   locked = false,
   errorCode?: string,
   linkedReceipts: LinkedReceipt[] = [],
+  visits: VisitListItem[] = [],
+  linkedVisitIds: number[] = [],
 ): string {
   const rows =
     payments.map(renderPaymentRow).join("") ||
@@ -260,7 +330,16 @@ export function renderPayments(
     : "";
 
   const panel = editingPayment
-    ? renderPanel(editingPayment, patients, providers, accounts, locked, linkedReceipts)
+    ? renderPanel(
+        editingPayment,
+        patients,
+        providers,
+        accounts,
+        locked,
+        linkedReceipts,
+        visits,
+        linkedVisitIds,
+      )
     : "";
 
   const content = `

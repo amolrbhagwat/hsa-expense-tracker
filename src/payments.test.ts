@@ -9,13 +9,17 @@ import {
   createPayment,
   deletePayment,
   getPayment,
+  getPaymentsForVisit,
+  getVisitIdsForPayment,
   isPaymentLocked,
   listPayments,
   parseAmountCents,
+  setPaymentVisits,
   updatePayment,
 } from "./payments.js";
 import { createPatient, listPatients } from "./patients.js";
 import { createProvider, listProviders } from "./providers.js";
+import { createVisit, listVisits } from "./visits.js";
 
 function tempDb() {
   const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
@@ -76,6 +80,23 @@ test("createPayment and listPayments round-trip, sorted by date descending", () 
   assert.equal(payments[0]!.accountName, "Chase Sapphire");
   assert.equal(payments[0]!.accountType, "personal");
   assert.equal(payments[0]!.receiptCount, 0);
+  assert.equal(payments[0]!.visitCount, 0);
+
+  cleanup();
+});
+
+test("listPayments reports how many visits link to each payment", () => {
+  const { db, cleanup } = tempDb();
+  const { patientId, providerId, accountId } = seed(db);
+
+  createPayment(db, "2026-06-01", "42.30", patientId, providerId, accountId);
+  const [payment] = listPayments(db);
+  createVisit(db, "2026-05-20", patientId, providerId);
+  const [visit] = listVisits(db);
+
+  setPaymentVisits(db, payment!.id, [visit!.id]);
+
+  assert.equal(listPayments(db)[0]!.visitCount, 1);
 
   cleanup();
 });
@@ -178,6 +199,35 @@ test("a payment locks once a Reimbursement links to it", () => {
   ).run(payment!.id);
 
   assert.equal(isPaymentLocked(db, payment!.id), true);
+
+  cleanup();
+});
+
+test("setPaymentVisits replaces the full set of linked visits, and getPaymentsForVisit reflects it", () => {
+  const { db, cleanup } = tempDb();
+  const { patientId, providerId, accountId } = seed(db);
+
+  createPayment(db, "2026-06-01", "42.30", patientId, providerId, accountId);
+  const [payment] = listPayments(db);
+  createVisit(db, "2026-05-20", patientId, providerId);
+  createVisit(db, "2026-05-28", patientId, providerId);
+  const visits = listVisits(db).sort((a, b) => a.date.localeCompare(b.date));
+  const [earlierVisit, laterVisit] = visits;
+
+  assert.deepEqual(getVisitIdsForPayment(db, payment!.id), []);
+
+  setPaymentVisits(db, payment!.id, [earlierVisit!.id, laterVisit!.id]);
+  assert.deepEqual(
+    getVisitIdsForPayment(db, payment!.id).sort(),
+    [earlierVisit!.id, laterVisit!.id].sort(),
+  );
+  assert.equal(getPaymentsForVisit(db, earlierVisit!.id).length, 1);
+  assert.equal(getPaymentsForVisit(db, earlierVisit!.id)[0]!.id, payment!.id);
+
+  setPaymentVisits(db, payment!.id, [laterVisit!.id]);
+  assert.deepEqual(getVisitIdsForPayment(db, payment!.id), [laterVisit!.id]);
+  assert.equal(getPaymentsForVisit(db, earlierVisit!.id).length, 0);
+  assert.equal(getPaymentsForVisit(db, laterVisit!.id).length, 1);
 
   cleanup();
 });

@@ -1,4 +1,6 @@
+import type { AccountType } from "../accounts.js";
 import type { Patient } from "../patients.js";
+import type { PaymentListItem } from "../payments.js";
 import type { Provider, ProviderCategory } from "../providers.js";
 import type { Visit, VisitListItem } from "../visits.js";
 import { layout } from "./layout.js";
@@ -31,6 +33,16 @@ function formatDate(isoDate: string): string {
   });
 }
 
+function formatMoney(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function paymentPill(accountType: AccountType): string {
+  return accountType === "personal"
+    ? `<span class="pill pill-warn"><span class="pill-dot"></span>Reimbursable</span>`
+    : `<span class="pill pill-neutral"><span class="pill-dot"></span>Settled</span>`;
+}
+
 function patientOptions(patients: Patient[], selectedId?: number): string {
   return patients
     .map((patient) => {
@@ -61,7 +73,20 @@ function closeIcon(): string {
   </svg>`;
 }
 
-function renderVisitCard(visit: VisitListItem): string {
+function renderPaymentsLine(payments: PaymentListItem[]): string {
+  if (payments.length === 0) {
+    return `<div class="visit-meta empty-note">No payment recorded for this visit yet</div>`;
+  }
+  const chips = payments
+    .map(
+      (payment) =>
+        `<span class="chip">${formatMoney(payment.amountCents)} · ${formatDate(payment.date)} · ${paymentPill(payment.accountType)}</span>`,
+    )
+    .join("");
+  return `<div class="visit-chips">${chips}</div>`;
+}
+
+function renderVisitCard(visit: VisitListItem, payments: PaymentListItem[]): string {
   const notesLine = visit.notes
     ? `<div class="visit-notes">${escapeHtml(visit.notes)}</div>`
     : "";
@@ -74,7 +99,7 @@ function renderVisitCard(visit: VisitListItem): string {
         </span>
         <a href="/visits?edit=${visit.id}" class="btn-icon" title="Edit visit">${editIcon()}</a>
       </div>
-      <div class="visit-meta empty-note">No payment recorded for this visit yet</div>
+      ${renderPaymentsLine(payments)}
       <div class="visit-meta empty-note">No reimbursement recorded for this visit yet</div>
       ${notesLine}
     </div>`;
@@ -191,14 +216,16 @@ export function renderVisits(
   visits: VisitListItem[],
   patients: Patient[],
   providers: Provider[],
+  paymentsByVisitId: Map<number, PaymentListItem[]>,
   editingVisit?: Visit,
   filesKey = "",
   files?: string[],
   errorCode?: string,
 ): string {
   const cards =
-    visits.map(renderVisitCard).join("") ||
-    `<p class="empty-note">No visits yet.</p>`;
+    visits
+      .map((visit) => renderVisitCard(visit, paymentsByVisitId.get(visit.id) ?? []))
+      .join("") || `<p class="empty-note">No visits yet.</p>`;
 
   const canAdd = patients.length > 0 && providers.length > 0;
   const addForm = canAdd

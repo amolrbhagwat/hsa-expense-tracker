@@ -14,8 +14,11 @@ import {
   createPayment,
   deletePayment,
   getPayment,
+  getPaymentsForVisit,
+  getVisitIdsForPayment,
   isPaymentLocked,
   listPayments,
+  setPaymentVisits,
   updatePayment,
   updatePaymentNotes,
 } from "./payments.js";
@@ -88,6 +91,9 @@ export function buildApp(
       const linkedReceipts = editingPayment
         ? getReceiptsForPayment(db, editingPayment.id)
         : [];
+      const linkedVisitIds = editingPayment
+        ? getVisitIdsForPayment(db, editingPayment.id)
+        : [];
       reply
         .type("text/html")
         .send(
@@ -100,6 +106,8 @@ export function buildApp(
             locked,
             request.query.error,
             linkedReceipts,
+            listVisits(db),
+            linkedVisitIds,
           ),
         );
     },
@@ -140,6 +148,7 @@ export function buildApp(
       providerId: string;
       accountId: string;
       notes?: string;
+      visitIds?: string | string[];
     };
   }>("/payments/:id/update", async (request, reply) => {
     const id = Number(request.params.id);
@@ -148,9 +157,11 @@ export function buildApp(
       reply.code(404).send("Payment not found");
       return;
     }
+    const visitIds = toIdArray(request.body.visitIds);
 
     if (isPaymentLocked(db, id)) {
       updatePaymentNotes(db, id, request.body.notes);
+      setPaymentVisits(db, id, visitIds);
       reply.redirect("/payments");
       return;
     }
@@ -166,6 +177,7 @@ export function buildApp(
       request.body.notes,
     );
     if (result === "saved") {
+      setPaymentVisits(db, id, visitIds);
       reply.redirect("/payments");
     } else {
       reply.redirect(`/payments?edit=${id}&error=${result}`);
@@ -193,13 +205,18 @@ export function buildApp(
       const editingVisit = editId ? getVisit(db, editId) : undefined;
       const filesKey = editingVisit ? filesKeyFor(editingVisit) : "";
       const files = editingVisit ? listVisitFiles(dataDir, filesKey) : undefined;
+      const visits = listVisits(db);
+      const paymentsByVisitId = new Map(
+        visits.map((visit) => [visit.id, getPaymentsForVisit(db, visit.id)]),
+      );
       reply
         .type("text/html")
         .send(
           renderVisits(
-            listVisits(db),
+            visits,
             listPatients(db),
             listProviders(db),
+            paymentsByVisitId,
             editingVisit,
             filesKey,
             files,

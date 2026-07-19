@@ -149,6 +149,8 @@ export const baseStyles = `
   .visit-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
   .visit-meta.empty-note { font-style: italic; color: var(--ink-faint); }
   .visit-notes { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
+  .visit-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; font-size: 12px; }
 
   /* ---------- slide-over panel ---------- */
   .scrim { position: fixed; inset: 0; background: rgba(20,18,26,.35); z-index: 40; }

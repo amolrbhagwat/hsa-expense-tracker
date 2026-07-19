@@ -19,6 +19,7 @@ export interface PaymentListItem extends Payment {
   accountName: string;
   accountType: AccountType;
   receiptCount: number;
+  visitCount: number;
 }
 
 export type SavePaymentResult = "saved" | "blank-date" | "invalid-amount";
@@ -40,6 +41,7 @@ interface PaymentListRow extends PaymentRow {
   account_name: string;
   account_type: AccountType;
   receipt_count: number;
+  visit_count: number;
 }
 
 function fromRow(row: PaymentRow): Payment {
@@ -54,22 +56,8 @@ function fromRow(row: PaymentRow): Payment {
   };
 }
 
-export function listPayments(db: Database.Database): PaymentListItem[] {
-  return (
-    db
-      .prepare(
-        `SELECT pay.id, pay.date, pay.amount_cents, pay.patient_id, pay.provider_id, pay.account_id, pay.notes,
-                pt.name AS patient_name, pr.name AS provider_name, pr.category AS provider_category,
-                a.name AS account_name, a.type AS account_type,
-                (SELECT COUNT(*) FROM receipt_payments rp WHERE rp.payment_id = pay.id) AS receipt_count
-         FROM payments pay
-         JOIN patients pt ON pt.id = pay.patient_id
-         JOIN providers pr ON pr.id = pay.provider_id
-         JOIN accounts a ON a.id = pay.account_id
-         ORDER BY pay.date DESC, pay.id DESC`,
-      )
-      .all() as PaymentListRow[]
-  ).map((row) => ({
+function fromListRow(row: PaymentListRow): PaymentListItem {
+  return {
     ...fromRow(row),
     patientName: row.patient_name,
     providerName: row.provider_name,
@@ -77,7 +65,43 @@ export function listPayments(db: Database.Database): PaymentListItem[] {
     accountName: row.account_name,
     accountType: row.account_type,
     receiptCount: row.receipt_count,
-  }));
+    visitCount: row.visit_count,
+  };
+}
+
+const PAYMENT_LIST_SELECT = `
+  SELECT pay.id, pay.date, pay.amount_cents, pay.patient_id, pay.provider_id, pay.account_id, pay.notes,
+         pt.name AS patient_name, pr.name AS provider_name, pr.category AS provider_category,
+         a.name AS account_name, a.type AS account_type,
+         (SELECT COUNT(*) FROM receipt_payments rp WHERE rp.payment_id = pay.id) AS receipt_count,
+         (SELECT COUNT(*) FROM payment_visits pv WHERE pv.payment_id = pay.id) AS visit_count
+  FROM payments pay
+  JOIN patients pt ON pt.id = pay.patient_id
+  JOIN providers pr ON pr.id = pay.provider_id
+  JOIN accounts a ON a.id = pay.account_id`;
+
+export function listPayments(db: Database.Database): PaymentListItem[] {
+  return (
+    db
+      .prepare(`${PAYMENT_LIST_SELECT} ORDER BY pay.date DESC, pay.id DESC`)
+      .all() as PaymentListRow[]
+  ).map(fromListRow);
+}
+
+export function getPaymentsForVisit(
+  db: Database.Database,
+  visitId: number,
+): PaymentListItem[] {
+  return (
+    db
+      .prepare(
+        `${PAYMENT_LIST_SELECT}
+         JOIN payment_visits pv ON pv.payment_id = pay.id
+         WHERE pv.visit_id = ?
+         ORDER BY pay.date DESC, pay.id DESC`,
+      )
+      .all(visitId) as PaymentListRow[]
+  ).map(fromListRow);
 }
 
 export function getPayment(
@@ -106,6 +130,36 @@ export function isPaymentLocked(db: Database.Database, id: number): boolean {
     )
     .get(id);
   return reimbursementLink !== undefined;
+}
+
+export function getVisitIdsForPayment(
+  db: Database.Database,
+  paymentId: number,
+): number[] {
+  return (
+    db
+      .prepare("SELECT visit_id FROM payment_visits WHERE payment_id = ?")
+      .all(paymentId) as { visit_id: number }[]
+  ).map((row) => row.visit_id);
+}
+
+// Visit links carry no amount and don't fix anything in place, unlike a
+// Receipt or Reimbursement link, so they stay editable even on a locked
+// Payment (same treatment as notes) — replaces the full set on every save.
+export function setPaymentVisits(
+  db: Database.Database,
+  paymentId: number,
+  visitIds: number[],
+): void {
+  db.transaction(() => {
+    db.prepare("DELETE FROM payment_visits WHERE payment_id = ?").run(paymentId);
+    const link = db.prepare(
+      "INSERT INTO payment_visits (payment_id, visit_id) VALUES (?, ?)",
+    );
+    for (const visitId of visitIds) {
+      link.run(paymentId, visitId);
+    }
+  })();
 }
 
 function normalizeNotes(notes: string | undefined): string | null {

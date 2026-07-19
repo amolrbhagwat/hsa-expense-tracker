@@ -36,6 +36,7 @@ import {
   deleteReceipt,
   getLinkedPayments,
   getReceipt,
+  getReceiptsForPayment,
   listReceipts,
   updateReceiptNotes,
 } from "./receipts.js";
@@ -84,6 +85,9 @@ export function buildApp(
       const editId = request.query.edit ? Number(request.query.edit) : undefined;
       const editingPayment = editId ? getPayment(db, editId) : undefined;
       const locked = editingPayment ? isPaymentLocked(db, editingPayment.id) : false;
+      const linkedReceipts = editingPayment
+        ? getReceiptsForPayment(db, editingPayment.id)
+        : [];
       reply
         .type("text/html")
         .send(
@@ -95,6 +99,7 @@ export function buildApp(
             editingPayment,
             locked,
             request.query.error,
+            linkedReceipts,
           ),
         );
     },

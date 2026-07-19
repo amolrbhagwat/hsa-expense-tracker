@@ -18,6 +18,7 @@ export interface PaymentListItem extends Payment {
   providerCategory: ProviderCategory;
   accountName: string;
   accountType: AccountType;
+  receiptCount: number;
 }
 
 export type SavePaymentResult = "saved" | "blank-date" | "invalid-amount";
@@ -38,6 +39,7 @@ interface PaymentListRow extends PaymentRow {
   provider_category: ProviderCategory;
   account_name: string;
   account_type: AccountType;
+  receipt_count: number;
 }
 
 function fromRow(row: PaymentRow): Payment {
@@ -58,7 +60,8 @@ export function listPayments(db: Database.Database): PaymentListItem[] {
       .prepare(
         `SELECT pay.id, pay.date, pay.amount_cents, pay.patient_id, pay.provider_id, pay.account_id, pay.notes,
                 pt.name AS patient_name, pr.name AS provider_name, pr.category AS provider_category,
-                a.name AS account_name, a.type AS account_type
+                a.name AS account_name, a.type AS account_type,
+                (SELECT COUNT(*) FROM receipt_payments rp WHERE rp.payment_id = pay.id) AS receipt_count
          FROM payments pay
          JOIN patients pt ON pt.id = pay.patient_id
          JOIN providers pr ON pr.id = pay.provider_id
@@ -73,6 +76,7 @@ export function listPayments(db: Database.Database): PaymentListItem[] {
     providerCategory: row.provider_category,
     accountName: row.account_name,
     accountType: row.account_type,
+    receiptCount: row.receipt_count,
   }));
 }
 

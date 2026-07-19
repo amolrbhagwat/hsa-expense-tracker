@@ -2,6 +2,7 @@ import type { Account, AccountType } from "../accounts.js";
 import type { Patient } from "../patients.js";
 import type { Payment, PaymentListItem } from "../payments.js";
 import type { Provider, ProviderCategory } from "../providers.js";
+import type { LinkedReceipt } from "../receipts.js";
 import { layout } from "./layout.js";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -112,7 +113,7 @@ function renderPaymentRow(payment: PaymentListItem): string {
       <td class="num">${formatMoney(payment.amountCents)}</td>
       <td>${statusPill(payment.accountType)}</td>
       <td class="row-links">—</td>
-      <td class="row-links">—</td>
+      <td class="row-links">${payment.receiptCount === 0 ? "—" : `${payment.receiptCount} receipt${payment.receiptCount === 1 ? "" : "s"}`}</td>
       <td><a href="/payments?edit=${payment.id}" class="btn-icon" title="Edit payment">${editIcon()}</a></td>
     </tr>`;
 }
@@ -144,12 +145,28 @@ function renderDetailFields(
     <div class="field-row"><span class="field-label">Account</span><span class="field-value"><select name="accountId">${accountOptions(accounts, editingPayment.accountId)}</select></span></div>`;
 }
 
+function renderLinkedReceipts(linkedReceipts: LinkedReceipt[]): string {
+  if (linkedReceipts.length === 0) {
+    return `<p class="empty-note">No receipts linked.</p>`;
+  }
+  return linkedReceipts
+    .map(
+      (receipt) => `
+      <div class="link-row">
+        <a href="/receipts?view=${receipt.id}" class="lr-main">${escapeHtml(receipt.providerName)}</a>
+        <span class="lr-meta">${escapeHtml(receipt.disambiguator)} · ${formatDate(receipt.date)}</span>
+      </div>`,
+    )
+    .join("");
+}
+
 function renderPanel(
   editingPayment: Payment,
   patients: Patient[],
   providers: Provider[],
   accounts: Account[],
   locked: boolean,
+  linkedReceipts: LinkedReceipt[],
 ): string {
   const patient = patients.find((p) => p.id === editingPayment.patientId);
   const provider = providers.find((p) => p.id === editingPayment.providerId);
@@ -192,8 +209,8 @@ function renderPanel(
         </div>
 
         <div class="panel-section">
-          <h3>Receipts</h3>
-          <p class="empty-note">Linking receipts will be added later.</p>
+          <h3>Receipts (${linkedReceipts.length})</h3>
+          ${renderLinkedReceipts(linkedReceipts)}
         </div>
       </div>
       <div class="panel-footer">
@@ -212,6 +229,7 @@ export function renderPayments(
   editingPayment?: Payment,
   locked = false,
   errorCode?: string,
+  linkedReceipts: LinkedReceipt[] = [],
 ): string {
   const rows =
     payments.map(renderPaymentRow).join("") ||
@@ -242,7 +260,7 @@ export function renderPayments(
     : "";
 
   const panel = editingPayment
-    ? renderPanel(editingPayment, patients, providers, accounts, locked)
+    ? renderPanel(editingPayment, patients, providers, accounts, locked, linkedReceipts)
     : "";
 
   const content = `

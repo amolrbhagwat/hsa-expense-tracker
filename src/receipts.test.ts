@@ -13,6 +13,7 @@ import {
   deleteReceipt,
   getLinkedPayments,
   getReceipt,
+  getReceiptsForPayment,
   listReceipts,
   updateReceiptNotes,
 } from "./receipts.js";
@@ -164,6 +165,24 @@ test("getLinkedPayments returns the payments a receipt covers", () => {
   assert.equal(linked[0]!.amountCents, 4230);
   assert.equal(linked[0]!.providerName, "CVS Pharmacy");
   assert.equal(linked[0]!.patientName, "Kavi");
+
+  cleanup();
+});
+
+test("getReceiptsForPayment returns the receipts covering a payment", () => {
+  const { db, cleanup } = tempDb();
+  const { providerId, paymentId } = seed(db);
+
+  createReceipt(db, "2026-06-02", providerId, "receipt", [paymentId]);
+  createReceipt(db, "2026-06-05", providerId, "card-statement", [paymentId]);
+  assert.deepEqual(getReceiptsForPayment(db, paymentId + 999), []);
+
+  const linked = getReceiptsForPayment(db, paymentId);
+  assert.equal(linked.length, 2);
+  assert.equal(linked[0]!.date, "2026-06-05");
+  assert.equal(linked[0]!.disambiguator, "card-statement");
+  assert.equal(linked[0]!.providerName, "CVS Pharmacy");
+  assert.equal(linked[1]!.disambiguator, "receipt");
 
   cleanup();
 });

@@ -75,6 +75,26 @@ test("createPayment and listPayments round-trip, sorted by date descending", () 
   assert.equal(payments[0]!.providerCategory, "medical");
   assert.equal(payments[0]!.accountName, "Chase Sapphire");
   assert.equal(payments[0]!.accountType, "personal");
+  assert.equal(payments[0]!.receiptCount, 0);
+
+  cleanup();
+});
+
+test("listPayments reports how many receipts link to each payment", () => {
+  const { db, cleanup } = tempDb();
+  const { patientId, providerId, accountId } = seed(db);
+
+  createPayment(db, "2026-06-01", "42.30", patientId, providerId, accountId);
+  const [payment] = listPayments(db);
+  db.prepare(
+    "INSERT INTO receipts (date, provider_id, disambiguator) VALUES (?, ?, ?)",
+  ).run("2026-06-02", providerId, "receipt");
+  const receipt = db.prepare("SELECT id FROM receipts").get() as { id: number };
+  db.prepare(
+    "INSERT INTO receipt_payments (receipt_id, payment_id) VALUES (?, ?)",
+  ).run(receipt.id, payment!.id);
+
+  assert.equal(listPayments(db)[0]!.receiptCount, 1);
 
   cleanup();
 });

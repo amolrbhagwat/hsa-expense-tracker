@@ -23,6 +23,13 @@ export interface LinkedPayment {
   patientName: string;
 }
 
+export interface LinkedReceipt {
+  id: number;
+  date: string;
+  providerName: string;
+  disambiguator: string;
+}
+
 export type CreateReceiptResult =
   | "saved"
   | "blank-date"
@@ -110,6 +117,22 @@ export function getLinkedPayments(
        ORDER BY p.date DESC, p.id DESC`,
     )
     .all(receiptId) as LinkedPayment[];
+}
+
+export function getReceiptsForPayment(
+  db: Database.Database,
+  paymentId: number,
+): LinkedReceipt[] {
+  return db
+    .prepare(
+      `SELECT r.id, r.date, r.disambiguator, pr.name AS providerName
+       FROM receipt_payments rp
+       JOIN receipts r ON r.id = rp.receipt_id
+       JOIN providers pr ON pr.id = r.provider_id
+       WHERE rp.payment_id = ?
+       ORDER BY r.date DESC, r.id DESC`,
+    )
+    .all(paymentId) as LinkedReceipt[];
 }
 
 function normalizeNotes(notes: string | undefined): string | null {

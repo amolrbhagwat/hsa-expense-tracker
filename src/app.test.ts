@@ -801,6 +801,45 @@ test("GET /receipts lists receipts, and POST creates/views/deletes them", async 
   rmSync(dataDir, { recursive: true, force: true });
 });
 
+test("linking a Receipt to a Payment shows up on the Payment side, in the table and its edit panel", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { providerId, paymentId } = await seedPayment(app);
+
+  const beforeLink = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(beforeLink.body, /<td class="row-links">—<\/td>\s*<td><a href="\/payments\?edit=/);
+  const editBeforeLink = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editBeforeLink.body, /<h3>Receipts \(0\)<\/h3>\s*<p class="empty-note">No receipts linked\.<\/p>/);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/receipts",
+    payload: { date: "2026-06-02", providerId, disambiguator: "card-statement", paymentIds: paymentId },
+  });
+  const receiptsAfterCreate = await app.inject({ method: "GET", url: "/receipts" });
+  const receiptId = receiptsAfterCreate.body.match(/\/receipts\?view=(\d+)/)![1];
+  assert.equal(create.statusCode, 302);
+
+  const afterLink = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterLink.body, /1 receipt/);
+
+  const editPage = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editPage.body, /<h3>Receipts \(1\)<\/h3>/);
+  assert.match(editPage.body, /Dr\. Sam Okafor/);
+  assert.match(editPage.body, /card-statement · Jun 2, 2026/);
+
+  await app.inject({ method: "POST", url: `/receipts/${receiptId}/delete` });
+
+  const afterDelete = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(afterDelete.body, /<td class="row-links">—<\/td>\s*<td><a href="\/payments\?edit=/);
+  const editAfterDelete = await app.inject({ method: "GET", url: `/payments?edit=${paymentId}` });
+  assert.match(editAfterDelete.body, /<h3>Receipts \(0\)<\/h3>\s*<p class="empty-note">No receipts linked\.<\/p>/);
+  assert.doesNotMatch(editAfterDelete.body, /Locked — a Receipt or Reimbursement references this payment\./);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
 test("POST /receipts rejects a blank date, zero payments, or a duplicate combination", async () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
   const app = buildApp(dataDir, { logger: false });

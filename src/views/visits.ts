@@ -93,14 +93,13 @@ function renderVisitCard(visit: VisitListItem, payments: PaymentListItem[]): str
   return `
     <div class="visit-card">
       <div class="visit-head">
-        <span class="visit-title">${escapeHtml(visit.providerName)}
-          <span class="badge">${categoryLabel(visit.providerCategory)}</span>
-          <span class="visit-date">${formatDate(visit.date)} · ${escapeHtml(visit.patientName)}</span>
-        </span>
-        <a href="/visits?edit=${visit.id}" class="btn-icon" title="Edit visit">${editIcon()}</a>
+        <div class="visit-field visit-field-date">${formatDate(visit.date)}</div>
+        <div class="visit-field visit-field-patient">${escapeHtml(visit.patientName)}</div>
+        <div class="visit-field visit-field-provider">${escapeHtml(visit.providerName)} <span class="badge">${categoryLabel(visit.providerCategory)}</span></div>
+        <a href="/visits?edit=${visit.id}" class="btn-icon visit-edit-btn" title="Edit visit">${editIcon()}</a>
       </div>
+      <div class="visit-divider"></div>
       ${renderPaymentsLine(payments)}
-      <div class="visit-meta empty-note">No reimbursement recorded for this visit yet</div>
       ${notesLine}
     </div>`;
 }

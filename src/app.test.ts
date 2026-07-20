@@ -405,7 +405,7 @@ test("Visit cards only show a notes line once a visit has notes", async () => {
   const withoutNotes = await app.inject({ method: "GET", url: "/visits" });
   assert.doesNotMatch(withoutNotes.body, /class="visit-notes"/);
   assert.match(withoutNotes.body, /No payment recorded for this visit yet/);
-  assert.match(withoutNotes.body, /No reimbursement recorded for this visit yet/);
+  assert.doesNotMatch(withoutNotes.body, /No reimbursement recorded/);
 
   await app.inject({
     method: "POST",

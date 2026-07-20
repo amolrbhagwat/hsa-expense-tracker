@@ -143,13 +143,17 @@ export const baseStyles = `
 
   /* ---------- visit cards ---------- */
   .visit-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
-  .visit-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
-  .visit-title { font-size: 14px; font-weight: 600; }
-  .visit-date { color: var(--ink-faint); font-weight: 400; font-size: 12.5px; margin-left: 8px; }
+  .visit-head { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .visit-field { flex: none; font-size: 13px; }
+  .visit-field-date { width: 108px; color: var(--ink-soft); }
+  .visit-field-patient { width: 90px; color: var(--ink-soft); }
+  .visit-field-provider { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+  .visit-edit-btn { margin-left: auto; flex: none; }
+  .visit-divider { border-top: 1px solid var(--line); margin: 12px 0 10px; }
   .visit-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
   .visit-meta.empty-note { font-style: italic; color: var(--ink-faint); }
-  .visit-notes { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
-  .visit-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .visit-notes { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; padding: 7px 10px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--line-strong); }
+  .visit-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; font-size: 12px; }
 
   /* ---------- slide-over panel ---------- */

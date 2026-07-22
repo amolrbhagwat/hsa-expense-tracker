@@ -116,8 +116,9 @@ function linksSummary(payment: PaymentListItem): string {
 }
 
 function renderPaymentRow(payment: PaymentListItem): string {
+  const rowClass = payment.receiptCount === 0 ? ' class="missing-receipt"' : "";
   return `
-    <tr>
+    <tr${rowClass}>
       <td>${formatDate(payment.date)}</td>
       <td>${escapeHtml(payment.patientName)}</td>
       <td>${escapeHtml(payment.providerName)} <span class="badge">${categoryLabel(payment.providerCategory)}</span></td>
@@ -329,6 +330,10 @@ export function renderPayments(
     ? `<div class="error-banner">${escapeHtml(errorMessage)}</div>`
     : "";
 
+  const missingReceiptLegend = payments.some((p) => p.receiptCount === 0)
+    ? `<div class="legend"><span class="legend-swatch"></span> No receipt on file</div>`
+    : "";
+
   const panel = editingPayment
     ? renderPanel(
         editingPayment,
@@ -351,6 +356,7 @@ export function renderPayments(
       </div>
     </div>
     ${addForm}
+    ${missingReceiptLegend}
     <div class="table-wrap">
       <table class="data-table">
         <thead>

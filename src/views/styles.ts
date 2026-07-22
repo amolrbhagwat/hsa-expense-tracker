@@ -121,6 +121,10 @@ export const baseStyles = `
   .data-table td.actions { display: flex; gap: 2px; justify-content: flex-end; }
   .data-table td.num, .data-table th.num { text-align: right; }
   .row-links { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+  tr.missing-receipt td:first-child { border-left: 3px solid var(--warning); padding-left: 13px; }
+
+  .legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; }
+  .legend-swatch { width: 3px; height: 14px; background: var(--warning); display: inline-block; }
 
   /* ---------- pills ---------- */
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }

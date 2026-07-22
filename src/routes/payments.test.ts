@@ -97,6 +97,29 @@ test("POST /payments with a blank date or invalid amount redirects with an error
   rmSync(dataDir, { recursive: true, force: true });
 });
 
+test("payments missing a receipt get a row accent and a legend, which both disappear once linked", async () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
+  const app = buildApp(dataDir, { logger: false });
+  const { providerId, paymentId } = await seedPayment(app);
+
+  const beforeLink = await app.inject({ method: "GET", url: "/payments" });
+  assert.match(beforeLink.body, /<tr class="missing-receipt">/);
+  assert.match(beforeLink.body, /<div class="legend"><span class="legend-swatch"><\/span> No receipt on file<\/div>/);
+
+  await app.inject({
+    method: "POST",
+    url: "/receipts",
+    payload: { date: "2026-06-02", providerId, paymentIds: paymentId },
+  });
+
+  const afterLink = await app.inject({ method: "GET", url: "/payments" });
+  assert.doesNotMatch(afterLink.body, /<tr class="missing-receipt">/);
+  assert.doesNotMatch(afterLink.body, /class="legend"/);
+
+  await app.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
 test("a payment locks once a Receipt or Reimbursement references it, but notes stay editable", async () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
   const app = buildApp(dataDir, { logger: false });

@@ -37,9 +37,10 @@ npm start        # runs dist/index.js
 
 The app reads its data directory (SQLite file, `visit-files/`,
 `receipt-files/`) from the current working directory, so always launch it
-from the directory where you want that data to live — see
-`scripts/run-template.sh` for a copyable launcher. Schema migrations in
-`migrations/` run automatically on startup; no separate migrate step.
+from the directory where you want that data to live — run
+`node scripts/new-instance.js <path>` to set one up, which drops launchers
+(`run.sh` and `run.bat`) there. Schema migrations in `migrations/` run
+automatically on startup; no separate migrate step.
 
 Visit and receipt attachments are files you manage yourself on disk, not
 uploads — the app expects them at deterministic folder paths derived from

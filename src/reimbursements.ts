@@ -22,15 +22,16 @@ export interface ReimbursementListItem extends Reimbursement {
   totalCents: number;
 }
 
-// One payment this reimbursement covers, carrying that link's own amount —
-// not the payment's full amount, since a payment can be split across
-// multiple reimbursements.
+// One payment this reimbursement covers, carrying both that link's own
+// allocated amount and the payment's full amount — a payment can be split
+// across multiple reimbursements, so the two can differ.
 export interface LinkedReimbursementPayment {
   id: number;
   date: string;
   providerName: string;
   patientName: string;
   amountCents: number;
+  paymentAmountCents: number;
 }
 
 // The input shape when saving: {paymentId, amountCents} pairs from the
@@ -126,7 +127,7 @@ export function getLinkedPayments(
   return db
     .prepare(
       `SELECT p.id, p.date, pr.name AS providerName, pt.name AS patientName,
-              rp.amount_cents AS amountCents
+              rp.amount_cents AS amountCents, p.amount_cents AS paymentAmountCents
        FROM reimbursement_payments rp
        JOIN payments p ON p.id = rp.payment_id
        JOIN providers pr ON pr.id = p.provider_id

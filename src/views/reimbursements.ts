@@ -72,12 +72,12 @@ function closeIcon(): string {
 
 function renderCoversCell(linkedPayments: LinkedReimbursementPayment[]): string {
   if (linkedPayments.length === 0) return "—";
-  return linkedPayments
+  return `<div class="covers-list">${linkedPayments
     .map(
       (payment) =>
-        `<span class="chip">${escapeHtml(payment.providerName)} · ${formatMoney(payment.amountCents)}</span>`,
+        `<span class="chip">${formatMoney(payment.amountCents)} of ${formatMoney(payment.paymentAmountCents)} · ${formatDate(payment.date)} · ${escapeHtml(payment.providerName)}</span>`,
     )
-    .join(" ");
+    .join("")}</div>`;
 }
 
 function renderReimbursementRow(

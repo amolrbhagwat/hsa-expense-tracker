@@ -90,7 +90,7 @@ test("POST /reimbursements creates a partial reimbursement, and it shows up on b
   assert.match(list.body, /Fidelity HSA/);
   assert.match(list.body, /\$800\.00/);
   assert.match(list.body, /Initiated/);
-  assert.match(list.body, /Dr\. Sam Okafor · \$800\.00/);
+  assert.match(list.body, /\$800\.00 of \$900\.00 · Jun 1, 2026 · Dr\. Sam Okafor/);
 
   // $100 of the $900 payment is still reimbursable — it should still appear
   // in a fresh picker, capped at the remaining amount.

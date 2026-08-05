@@ -141,7 +141,7 @@ test("a payment can be split across two Reimbursements, matching the $800+$100 C
   cleanup();
 });
 
-test("getLinkedPayments returns each link's own allocated amount, not the payment's full amount", () => {
+test("getLinkedPayments returns each link's own allocated amount alongside the payment's full amount", () => {
   const { db, cleanup } = tempDb();
   const { hsaAccountId, paymentId } = seed(db);
 
@@ -154,6 +154,7 @@ test("getLinkedPayments returns each link's own allocated amount, not the paymen
   assert.equal(linked.length, 1);
   assert.equal(linked[0]!.id, paymentId);
   assert.equal(linked[0]!.amountCents, 30000);
+  assert.equal(linked[0]!.paymentAmountCents, 90000);
   assert.equal(linked[0]!.providerName, "Dr. Sam Okafor");
   assert.equal(linked[0]!.patientName, "Kavi");
 

@@ -159,6 +159,7 @@ export const baseStyles = `
   .visit-notes { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; padding: 7px 10px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--line-strong); }
   .visit-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; font-size: 12px; }
+  .covers-list { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 
   /* ---------- slide-over panel ---------- */
   .scrim { position: fixed; inset: 0; background: rgba(20,18,26,.35); z-index: 40; }

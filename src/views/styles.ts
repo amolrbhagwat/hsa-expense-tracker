@@ -194,6 +194,8 @@ export const baseStyles = `
   .pay-pick-row .pp-info { flex: 1; }
   .pay-pick-row .pp-main { font-weight: 600; }
   .pay-pick-row .pp-meta { color: var(--ink-soft); font-size: 11.5px; }
+  .pay-pick-row input[type="text"] { width: 78px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 7px; text-align: right; }
+  .pick-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; padding-top: 10px; }
 
   @media (max-width: 980px) {
     .topbar { padding: 0 18px; gap: 18px; }

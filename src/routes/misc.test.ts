@@ -32,22 +32,3 @@ test("GET / renders the home page as HTML", async () => {
   await app.close();
   rmSync(dataDir, { recursive: true, force: true });
 });
-
-for (const [url, heading] of [["/reimbursements", "Reimbursements"]] as const) {
-  test(`GET ${url} renders the ${heading} placeholder with its tab active`, async () => {
-    const dataDir = mkdtempSync(path.join(tmpdir(), "hsa-test-"));
-    const app = buildApp(dataDir, { logger: false });
-
-    const response = await app.inject({ method: "GET", url });
-
-    assert.equal(response.statusCode, 200);
-    assert.match(response.body, new RegExp(`<h1>${heading}</h1>`));
-    assert.match(
-      response.body,
-      new RegExp(`<a href="${url}" class="tab tab-active">${heading}</a>`),
-    );
-
-    await app.close();
-    rmSync(dataDir, { recursive: true, force: true });
-  });
-}

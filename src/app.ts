@@ -5,6 +5,7 @@ import { registerManageRoutes } from "./routes/manage.js";
 import { registerMiscRoutes } from "./routes/misc.js";
 import { registerPaymentRoutes } from "./routes/payments.js";
 import { registerReceiptRoutes } from "./routes/receipts.js";
+import { registerReimbursementRoutes } from "./routes/reimbursements.js";
 import { registerVisitRoutes } from "./routes/visits.js";
 
 export function buildApp(
@@ -20,6 +21,7 @@ export function buildApp(
   registerPaymentRoutes(app, db);
   registerVisitRoutes(app, db, dataDir);
   registerReceiptRoutes(app, db, dataDir);
+  registerReimbursementRoutes(app, db);
   registerManageRoutes(app, db);
 
   return app;

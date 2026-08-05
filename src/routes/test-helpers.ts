@@ -68,3 +68,32 @@ export async function seedPayment(app: FastifyInstance) {
 export function extractPanel(body: string): string {
   return body.match(/<aside class="panel">[\s\S]*?<\/aside>/)![0];
 }
+
+export async function seedReimbursablePayment(app: FastifyInstance) {
+  const { patientId, providerId, accountId } = await seedPatientProviderAccount(app);
+  await app.inject({
+    method: "POST",
+    url: "/payments",
+    payload: { date: "2026-06-01", amount: "900.00", patientId, providerId, accountId },
+  });
+  const payments = await app.inject({ method: "GET", url: "/payments" });
+  const paymentId = payments.body.match(/\/payments\?edit=(\d+)/)![1]!;
+
+  await app.inject({
+    method: "POST",
+    url: "/manage/accounts",
+    payload: { name: "Fidelity HSA", type: "hsa" },
+  });
+  const manage = await app.inject({ method: "GET", url: "/manage" });
+  const hsaAccountId = [...manage.body.matchAll(/\/manage\/accounts\/(\d+)\/delete/g)]
+    .map((m) => m[1]!)
+    .find((id) => id !== accountId)!;
+
+  return {
+    patientId,
+    providerId,
+    personalAccountId: accountId,
+    hsaAccountId,
+    paymentId,
+  };
+}
